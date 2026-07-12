@@ -40,12 +40,16 @@ WebSocket + piksel-fark analiziyle doğruladım. Bulgular:
 | `app/modules/c4i/simulation.py` | 3 sn tick: patrol/dispatch/onscene 3 modlu hareket motoru + 60 sn'de bir geçmiş snapshot |
 | `app/modules/c4i/dispatch.py` | Öncelik kuyruğu (şiddet + bekleme bonusu), haversine, ETA, DB-tabanlı atama (`assigned_unit_id`/`resolved_at`) |
 | `app/modules/c4i/predictive.py` | Kural-tabanlı erken uyarı skoru (bkz. Prediktif Risk bölümü) |
+| `app/modules/c4i/performance.py` | Sevk gecikmesi/seyahat/sahne/toplam müdahale süresi KPI'ları (saf fonksiyonlar) |
+| `app/modules/c4i/coverage.py` | Kapsama boşluğu skoru (en yakın birime mesafe × şiddet × olay sayısı) |
 | `app/modules/c4i/router.py` | `/units`, `/ws/units`, `/units/{id}/history`, `/analytics/*`, `/incidents/queue`, `/incidents/{id}/resolve` |
+| `app/modules/crime/spatial.py` | PostGIS çokgen/yarıçap sorgusu (`/api/v1/incidents/spatial-search`) — eski `app/api/v1/` buradan v2.4'te taşındı |
 | `app/scrapers/ibb_ingestor.py` | İBB CKAN trafik duyuru ingestor'u |
-| `alembic/` | Şema migrasyonları (baseline + dispatch alanları uygulandı) |
+| `alembic/` | Şema migrasyonları (baseline + dispatch/arrival/performans alanları uygulandı) |
 | `frontend/static/geo/turkey-il.geojson` | 81 il sınırı (OSM, sadeleştirilmiş, ~225 KB) |
-| `frontend/static/js/c4i.js` | Devriye katmanı (WS+polling), il choropleth, trend/koridor/prediktif panelleri |
+| `frontend/static/js/c4i.js` | Devriye katmanı (WS+polling), il choropleth, trend/koridor/prediktif/performans/kapsama panelleri |
 | `app/ui/admin.py` | Admin panel — sevk kuyruğu kartı + İBB tetikleme butonu |
+| `scripts/` | Bağımsız CLI araçları (bkz. "Yardımcı Scriptler" bölümü) — `pytest`'e dahil değil |
 
 ## Veri Modeli Notları
 
@@ -71,6 +75,18 @@ python run.py local      # Docker'daki app'i durdurup lokal uvicorn (DB docker'd
 - Harita: `http://localhost:8000/map` · Admin: `/admin` · API docs: `/api/docs`
 - Demo/mock veri sistemi **yok** (v2.1'de kaldırıldı). Veri: `POST /scrape` (OSINT) veya
   `POST /ingest/ibb` (resmi trafik, admin).
+
+## Yardımcı Scriptler (`scripts/`)
+
+Bunlar `pytest`'in parçası değil — çalışan bir instance'a karşı manuel/CLI diagnostik araçları:
+
+| Script | Ne yapar |
+|---|---|
+| `smoke_test.py [BASE_URL]` | Çalışan instance'a karşı hızlı uçtan uca sağlık kontrolü |
+| `diagnose_sources.py` | Her OSINT kaynağını (GDELT/RSS/Telegram) tek tek test edip `ingestion_report.json` üretir |
+| `probe_telegram.py [OUT_FILE]` | Telegram kanal adaylarının hangisinin canlı olduğunu tarar |
+| `run_scrape_poll.py` | `/scrape` tetikler, `/scraper/metrics`'i bitene kadar izler |
+| `normalize_crime_db.py` | Mevcut `crime_events` kayıtlarını normalize eder (kategori + konum) |
 
 ## Analitik Kuralları
 
@@ -153,6 +169,28 @@ Haritası" veri seti bulundu (farklı şema — yoğunluk/hız, olay değil) —
 6. [ ] İBB veri setinin canlılığını periyodik izleyen bir "veri tazeliği" uyarısı
 7. [ ] `police_unit_history` üzerinden ısı haritası / yoğunluk analizi (iz verisi birikince)
 8. [ ] Performans KPI'ları admin panelinde de göster (şu an sadece harita sidebar'ında)
+
+## Proje Düzeni (v2.4 dosya yapısı denetimi, 2026-07-13)
+
+- **Git artık aktif** — proje daha önce git deposu değildi, büyük bir dosya-yapısı temizliği
+  öncesi güvenlik ağı olarak `git init` yapıldı. `.env` doğru şekilde `.gitignore`'da, commit
+  edilmedi (doğrulandı). Bundan sonraki değişiklikler için normal git iş akışı kullanılabilir
+  (kullanıcı istemeden otomatik commit atma — bkz. genel talimatlar).
+- **`app/api/` kaldırıldı:** Tek dosyası olan `spatial.py`, tutarlılık için
+  `app/modules/crime/spatial.py`'ye taşındı — artık her şey `app/modules/<domain>/` altında.
+- **`scripts/test_ingestion.py` → `scripts/diagnose_sources.py`:** İsim `test_*.py` pytest
+  deseniyle çakışıyordu (bare `pytest` komutu yanlışlıkla toplamaya çalışırdı). `pytest.ini`'ye
+  ayrıca `testpaths = tests` eklendi (savunma katmanı).
+- **Kod tabanında gerçek "ölü dosya" bulunamadı** — `app/` altındaki her modül en az bir yerden
+  import ediliyor (sistematik olarak doğrulandı). v2.1'de zaten `.cursor/`, boş `.github/`,
+  demo/mock sistemi temizlenmişti; bu turda ek bir kod artığı çıkmadı.
+- **`docs/TRIA_Bitirme_Raporu.md` ve `Görseller/*.png`'ye DOKUNULMADI:** Bunlar kullanıcının
+  akademik tez içeriği/ekran görüntüleri — hâlâ pre-C4I mimariyi anlatıyor (eski isim "Türkiye
+  Risk İstihbarat Ağı", Time Slider/Draw&Search gibi artık var olmayan özellikler), yani
+  güncel değil. Ancak bunlar kod artığı değil, kullanıcının kendi yazdığı rapor — silinmedi/
+  değiştirilmedi. Kullanıcı isterse ayrı bir görev olarak C4I mimarisine göre güncellenebilir.
+- Bağımlılıklar (`requirements.txt`/`requirements-dev.txt`) kod tabanındaki gerçek import'larla
+  bire bir karşılaştırıldı — eksik/fazla paket yok.
 
 ## Bilinen Kısıtlar
 
