@@ -1,0 +1,32 @@
+services:
+  database:
+    image: postgis/postgis:15-3.4
+    container_name: tria_database
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=tria_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - tria_db_data:/var/lib/postgresql/data
+    restart: always
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tria_app
+    depends_on:
+      - database
+    env_file:
+      - .env
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+    ports:
+      - "8000:8000"
+    restart: always
+
+volumes:
+  tria_db_data:

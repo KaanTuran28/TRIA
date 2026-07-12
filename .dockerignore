@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.pyo
+.git/
+.venv/
+venv/
+logs/
+agent-transcripts/
+mcps/
+tests/
+alembic/versions/__pycache__/

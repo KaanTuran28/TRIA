@@ -1,0 +1,16 @@
+# Runtime — main.py + scraper pipeline
+fastapi
+uvicorn
+websockets
+sqlalchemy
+asyncpg
+geoalchemy2
+alembic
+pydantic
+python-dotenv
+feedparser
+apscheduler
+beautifulsoup4
+groq
+cloudscraper
+requests

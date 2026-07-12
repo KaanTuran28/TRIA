@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+
+<html lang="tr">
+
+<head>
+
+  <meta charset="utf-8"/>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+  <title>TRIA C4I — Gerçek Zamanlı Kolluk İstihbarat Ağı</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet"/>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+
+  <link rel="stylesheet" href="/static/css/map.css"/>
+
+</head>
+
+<body>
+
+  <div id="loader" class="loader"><div class="spinner"></div><span>Harita yükleniyor…</span></div>
+
+  <div class="top-right">
+
+    <a href="/admin">← Admin Panel</a>
+
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-head">
+
+      <div class="mini-logo">T</div>
+
+      <div>
+
+        <h1>TRIA C4I</h1>
+
+        <p class="sub">Asayiş Komuta Merkezi · OSINT Füzyon · Canlı Devriye</p>
+
+      </div>
+
+    </div>
+
+    <div class="c4i-grid">
+
+      <div class="c4i-tile">
+
+        <span class="c4i-num" id="activePatrolCount">—</span>
+
+        <span class="c4i-label">Aktif Devriye</span>
+
+      </div>
+
+      <div class="c4i-tile">
+
+        <span class="c4i-num" id="criticalCount">—</span>
+
+        <span class="c4i-label">Kritik Olay (1S)</span>
+
+      </div>
+
+      <div class="c4i-tile">
+
+        <span class="c4i-num" id="avgResponseTime">—</span>
+
+        <span class="c4i-label">Ort. Müdahale (dk)</span>
+
+      </div>
+
+    </div>
+
+    <div class="view-panel">
+
+      <span class="panel-label">C4I Katmanları</span>
+
+      <label class="filter-check"><input type="checkbox" id="layerPatrols" checked/> 🚓 Canlı Devriyeler</label>
+
+      <label class="filter-check"><input type="checkbox" id="layerRisk" checked/> 🔺 Yükselen Risk Bölgeleri</label>
+
+      <div id="patrolStats" class="patrol-stats">Devriye verisi bekleniyor…</div>
+
+    </div>
+
+    <div class="view-panel">
+
+      <span class="panel-label">📈 Risk Trendi (7g / önceki 7g)</span>
+
+      <div id="trendList" class="trend-list">Yükleniyor…</div>
+
+    </div>
+
+    <div class="view-panel">
+
+      <span class="panel-label">🔮 Erken Uyarı Skoru</span>
+
+      <div id="predictiveList" class="trend-list">Yükleniyor…</div>
+
+    </div>
+
+    <div class="view-panel">
+
+      <span class="panel-label">🛣️ Yüksek Riskli Koridorlar</span>
+
+      <div id="corridorList" class="trend-list">Yükleniyor…</div>
+
+    </div>
+
+    <div class="view-panel">
+
+      <span class="panel-label">⏱️ Müdahale Performansı (30g)</span>
+
+      <div id="performanceList" class="trend-list">Yükleniyor…</div>
+
+    </div>
+
+    <div class="view-panel">
+
+      <span class="panel-label">🕳️ Kapsama Boşlukları</span>
+
+      <div id="coverageList" class="trend-list">Yükleniyor…</div>
+
+    </div>
+
+    <div class="view-panel">
+
+      <span class="panel-label">🚨 Kritik Olaylar — Son 1 Saat</span>
+
+      <div id="criticalList" class="crit-list">Yükleniyor…</div>
+
+    </div>
+
+    <div class="stat-box">
+
+      <div class="stat-row">
+
+        <span class="stat-num" id="eventCount">—</span>
+
+        <span class="stat-unit">görünür</span>
+
+      </div>
+
+      <div id="totalLine" class="stat-sub">Toplam: —</div>
+
+      <div id="catList" class="cat-list">Veriler yükleniyor…</div>
+
+    </div>
+
+    <div class="view-panel">
+
+      <span class="panel-label">Görünüm</span>
+
+      <div class="view-toggles">
+
+        <button type="button" class="view-btn active" data-view-mode="cluster">📍 Küme</button>
+
+        <button type="button" class="view-btn" data-view-mode="heatmap">🔥 Isı Haritası</button>
+
+        <button type="button" class="view-btn" data-view-mode="points">◎ Nokta</button>
+
+      </div>
+
+    </div>
+
+    <div class="view-panel">
+
+      <span class="panel-label">Filtreler</span>
+
+      <label class="filter-check"><input type="checkbox" id="sevCritical" checked/> Kritik (7–10)</label>
+
+      <label class="filter-check"><input type="checkbox" id="sevMedium" checked/> Orta (5–6)</label>
+
+      <label class="filter-check"><input type="checkbox" id="sevLow" checked/> Düşük (1–4)</label>
+
+      <span class="panel-label" style="margin-top:8px;display:block">Olay Tipi</span>
+
+      <label class="filter-check"><input type="checkbox" id="typeCrime" checked/> 🚔 Asayiş / Suç</label>
+
+      <label class="filter-check"><input type="checkbox" id="typeTraffic" checked/> 🚗 Trafik Kazası</label>
+
+      <label class="filter-check"><input type="checkbox" id="typeFire" checked/> 🔥 Yangın / Anomali</label>
+
+      <button type="button" class="btn btn-fit" onclick="fitVisibleBounds()">🎯 Tümünü kadraja al</button>
+
+    </div>
+
+    <div class="actions">
+
+      <button class="btn btn-primary" type="button" onclick="refreshMap(true)">↻ Yenile</button>
+
+      <button class="btn" type="button" onclick="startScrape()">▶ Veri tara</button>
+
+    </div>
+
+    <button type="button" class="btn btn-report" onclick="generateRegionalReport()">
+
+      📄 Bölgesel Rapor (PDF / Yazdır)
+
+    </button>
+
+  </aside>
+
+  <div class="legend">
+
+    <h3>AI şiddet indeksi</h3>
+
+    <div class="legend-item"><span class="dot severity-critical-dot"></span> Kritik (7–10)</div>
+
+    <div class="legend-item"><span class="dot severity-medium-dot"></span> Orta (5–6)</div>
+
+    <div class="legend-item"><span class="dot severity-low-dot"></span> Düşük (1–4)</div>
+
+    <h3 style="margin-top:10px">Devriye durumu</h3>
+
+    <div class="legend-item"><span class="dot dot-patrolling"></span> Devriyede</div>
+
+    <div class="legend-item"><span class="dot dot-responding"></span> Müdahalede</div>
+
+  </div>
+
+  <div id="map"></div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+
+  <script src="/static/js/map.js"></script>
+
+  <script src="/static/js/c4i.js"></script>
+
+</body>
+
+</html>
+

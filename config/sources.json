@@ -1,0 +1,146 @@
+{
+  "_comment": "TRIA Asayis Radari — yalnizca suc, polis operasyonu ve kamu duzeni",
+  "_legal_note": "Yasal/resmi kaynak envanteri ve KVKK notlari: docs/VERI_KAYNAKLARI.md",
+
+  "official_apis": {
+    "_note": "Resmi acik veri kaynaklari — ingestor'lar yazildikca enabled yapilacak",
+    "ibb_trafik_duyuru": {
+      "enabled": true,
+      "type": "ckan_datastore",
+      "base_url": "https://data.ibb.gov.tr",
+      "resource_id": "1c043914-8a76-4793-bae9-c60a68c7d389",
+      "fetch_limit": 200,
+      "interval_minutes": 30,
+      "_note": "IBB Ulasim Yonetim Merkezi trafik duyurulari (dogrulandi 2026-07-12: 148k kayit, sort=_id desc calisiyor). CKAN datastore_search, ucretsiz, acik lisans.",
+      "incident_type": "traffic_accident"
+    },
+    "tuik_guvenlik": {
+      "enabled": false,
+      "type": "bulk_download",
+      "url": "https://data.tuik.gov.tr",
+      "_note": "Yillik il bazli guvenlik/adalet istatistikleri — trend dogrulama ve normalizasyon (100k kisi basina suc orani) icin"
+    },
+    "adalet_istatistik": {
+      "enabled": false,
+      "type": "bulk_download",
+      "url": "https://adlisicil.adalet.gov.tr",
+      "_note": "Adalet Bakanligi adli istatistik yilliklari (UYAP kaynakli) — dogrulama katmani"
+    },
+    "ulasav": {
+      "enabled": false,
+      "type": "portal",
+      "url": "https://ulasav.csb.gov.tr",
+      "_note": "Ulusal Akilli Sehir Acik Veri Platformu — sehir bazli ek veri setleri"
+    }
+  },
+
+  "apis": {
+    "gdelt_crime_turkey": {
+      "enabled": true,
+      "url": "https://api.gdeltproject.org/api/v1/gkg_geojson",
+      "queries": [
+        "geoname:Turkey,ARREST",
+        "geoname:Turkey,TAX_FNCACT_POLICE",
+        "geoname:Turkey,KILL",
+        "geoname:Turkey,TERROR"
+      ],
+      "timespan_minutes": 1440,
+      "maxrows": 120,
+      "_note": "GDELT v2 /geo/geo su an 404; calisan GKG v1 GeoJSON kullanilir"
+    }
+  },
+
+  "rss": {
+    "iha_asayis": {
+      "url": "https://www.iha.com.tr/rss",
+      "enabled": false,
+      "_note": "RSS HTML donuyor / parse hatasi — devre disi"
+    },
+    "trthaber": {
+      "url": "https://www.trthaber.com/rss/gundem.xml",
+      "enabled": false,
+      "_note": "404 — devre disi"
+    },
+    "posta_gundem": { "url": "https://www.posta.com.tr/rss/gundem.xml", "enabled": true },
+    "cumhuriyet_sondakika": { "url": "https://www.cumhuriyet.com.tr/rss/son_dakika.xml", "enabled": true },
+    "aa_gundem": { "url": "https://www.aa.com.tr/tr/rss/default?cat=gundem", "enabled": true },
+    "haberturk": { "url": "https://www.haberturk.com/rss/kategori/gundem.xml", "enabled": true },
+    "ntv": { "url": "https://www.ntv.com.tr/gundem.rss", "enabled": true },
+    "hurriyet": { "url": "https://www.hurriyet.com.tr/rss/gundem", "enabled": true },
+    "sabah": { "url": "https://www.sabah.com.tr/rss/gundem.xml", "enabled": true },
+    "sozcu": { "url": "https://www.sozcu.com.tr/feeds-rss-category-sozcu", "enabled": true },
+    "milliyet_gundem": { "url": "https://www.milliyet.com.tr/rss/rssNew/gundemRSS.xml", "enabled": true },
+    "cnnturk": { "url": "https://www.cnnturk.com/feed/rss/all/news", "enabled": true },
+    "yenisafak_gundem": { "url": "https://www.yenisafak.com/rss?category=gundem", "enabled": true },
+    "ahaber_gundem": { "url": "https://www.ahaber.com.tr/rss/gundem.xml", "enabled": true },
+    "bbc_turkce": { "url": "https://www.bbc.com/turkce/index.xml", "enabled": false },
+    "t24": { "url": "https://t24.com.tr/rss/haberler", "enabled": false }
+  },
+
+  "priority_rss": ["aa_gundem", "ntv", "hurriyet", "haberturk"],
+  "use_priority_rss_only": false,
+
+  "telegram": {
+    "enabled": true,
+    "_note": "t.me/s onizleme ile ucretsiz; @ olmadan kullanici adi. 2026-03 dogrulandi.",
+    "posts_per_channel": 15,
+    "channels": [
+      "asayishaber",
+      "operasyonhaber",
+      "conflict_tr",
+      "polisgundem",
+      "sondakikacc",
+      "ajans_muhbir",
+      "sondakika",
+      "haberler",
+      "haberpaylasim",
+      "ensonhaber",
+      "anadoluajansi"
+    ],
+    "_channel_notes": {
+      "asayishaber": "Asayis odakli",
+      "operasyonhaber": "Operasyon / guvenlik",
+      "conflict_tr": "Catisma / guvenlik haberleri",
+      "polisgundem": "Polis gundemi (dusuk hacim)",
+      "sondakikacc": "Son dakika",
+      "ajans_muhbir": "Muhbir ajansi",
+      "haberler": "~27k abone son dakika",
+      "haberpaylasim": "Haber paylasim",
+      "asayisberkemaltr": "Onizleme bos — devre disi"
+    }
+  },
+
+  "reddit_rss": {
+    "enabled": true,
+    "_note": "Ucretsiz public RSS; API anahtari gerekmez. Prefilter + Groq ile islenir.",
+    "feeds": [
+      {
+        "name": "reddit_tr_asayis",
+        "url": "https://www.reddit.com/r/Turkey/search.rss?q=cinayet+OR+polis+OR+operasyon+OR+jandarma&restrict_sr=1&sort=new"
+      },
+      {
+        "name": "reddit_tr_crime_en",
+        "url": "https://www.reddit.com/r/Turkey/search.rss?q=crime+OR+arrest+OR+shooting&restrict_sr=1&sort=new"
+      }
+    ]
+  },
+
+  "google_news": {
+    "enabled": true,
+    "queries": [
+      {
+        "name": "ulusal_asayis",
+        "query": "Turkiye AND (cinayet OR operasyon OR polis OR jandarma OR silah OR kavga OR uyusturucu OR hirsizlik) when:1d"
+      },
+      {
+        "name": "bolgesel_operasyon",
+        "query": "Turkiye AND (gozalti OR tutuklama OR narkotik OR gasp OR silahli) when:2d"
+      }
+    ]
+  },
+
+  "x_rss_bridges": {
+    "enabled": false,
+    "_note": "Nitter kopuk oldugunda kapali tutulur"
+  }
+}
