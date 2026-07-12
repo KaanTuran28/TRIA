@@ -9,7 +9,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
-from app.api.v1.spatial import router as spatial_router
+from app.modules.crime.spatial import router as spatial_router
 from app.core.database import AsyncSessionLocal, Base, engine
 from app.core.logging_config import configure_logging
 from app.modules.c4i.models import PoliceUnit  # noqa: F401
@@ -87,7 +87,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="TRIA C4I — Gerçek Zamanlı Kolluk İstihbarat Ağı",
     description="OSINT olay füzyonu + canlı devriye takibi + prediktif risk analitiği (C4I ortak harekat resmi)",
-    version="2.0.0",
+    version="2.4.0",
     docs_url="/api/docs",
     redoc_url=None,
     lifespan=lifespan,
