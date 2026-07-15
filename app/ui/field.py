@@ -80,22 +80,29 @@ FIELD_HTML = f"""<!DOCTYPE html>
 
     const SHIFT_TR = {{ gunduz: 'Gündüz', gece: 'Gece' }};
 
+    const ROSTER_DISPLAY_LIMIT = 40; // admin/merkez gibi il-kisitlamasiz roller icin (bkz. field.py)
+
     async function loadPersonnel() {{
       const el = document.getElementById('personnelList');
+      if (!getAuth()) {{ el.innerHTML = '<span class="empty">Vardiyanızı görmek için giriş yapın.</span>'; return; }}
       try {{
         const r = await fetch('/api/v1/personnel', {{ headers: authHeader() }});
         const data = await r.json();
         const list = data.personnel || [];
         if (!list.length) {{ el.innerHTML = '<span class="empty">Bu bölgede kayıtlı personel yok.</span>'; return; }}
         const badge = '<span class="shift-badge shift-' + data.on_duty_shift + '">Şu an: ' + SHIFT_TR[data.on_duty_shift] + '</span>';
-        const rows = list.map(function (p) {{
+        const shown = list.slice(0, ROSTER_DISPLAY_LIMIT);
+        const rows = shown.map(function (p) {{
           return (
             '<div class="roster-row' + (p.on_duty ? '' : ' off-duty') + '">' +
             '<span>' + p.full_name + '<br><span class="incident-meta">' + p.rank + ' · ' + (p.unit_id || '—') + '</span></span>' +
             '<span class="shift-badge shift-' + p.shift + '">' + SHIFT_TR[p.shift] + '</span></div>'
           );
         }}).join('');
-        el.innerHTML = '<div style="margin-bottom:10px">' + badge + '</div>' + rows;
+        const overflow = list.length > shown.length
+          ? '<div class="empty" style="margin-top:8px">+ ' + (list.length - shown.length) + ' kişi daha (il/ilçe girişiyle daraltılabilir)</div>'
+          : '';
+        el.innerHTML = '<div style="margin-bottom:10px">' + badge + '</div>' + rows + overflow;
       }} catch (e) {{ el.innerHTML = '<span class="empty">Personel okunamadı.</span>'; }}
     }}
 
@@ -107,6 +114,7 @@ FIELD_HTML = f"""<!DOCTYPE html>
 
     async function loadIncidents() {{
       const el = document.getElementById('incidentList');
+      if (!getAuth()) {{ el.innerHTML = '<span class="empty">Olay kuyruğunu görmek için giriş yapın.</span>'; return; }}
       try {{
         const r = await fetch('/api/v1/incidents/queue', {{ headers: authHeader() }});
         const data = await r.json();

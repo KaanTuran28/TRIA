@@ -87,6 +87,18 @@
     }
   }
 
+  function initMobileSidebar() {
+    const toggle = document.getElementById("sidebarToggle");
+    const backdrop = document.getElementById("sidebarBackdrop");
+    if (!toggle) return;
+    toggle.addEventListener("click", function () {
+      document.body.classList.toggle("sidebar-open");
+    });
+    backdrop?.addEventListener("click", function () {
+      document.body.classList.remove("sidebar-open");
+    });
+  }
+
   // ---------------------------------------------------------- bolge / birim tipi filtresi
 
   const UNIT_TYPES = ["asayis", "trafik", "tem", "yunus", "cevik_kuvvet"];
@@ -184,7 +196,31 @@
 
   // ---------------------------------------------------------- devriye katmani
 
-  const patrolLayer = L.layerGroup().addTo(map);
+  // 178 birim (81 il, bkz. CLAUDE.md v2.8) tekil ikon+etiketle ulke genelinde okunmaz bir
+  // yigin olusturuyordu — olay marker'lari icin zaten yuklu leaflet.markercluster burada da
+  // kullaniliyor: sehire girince (disableClusteringAtZoom) tekil birimler+etiketler, uzaktan
+  // kume baloncugu gorunur.
+  const patrolLayer = L.markerClusterGroup({
+    maxClusterRadius: 50,
+    spiderfyOnMaxZoom: true,
+    showCoverageOnHover: false,
+    disableClusteringAtZoom: 11,
+    chunkedLoading: true,
+    iconCreateFunction: function (cluster) {
+      const markers = cluster.getAllChildMarkers();
+      const respondingCount = markers.filter(function (m) { return m.options.unitStatus === "responding"; }).length;
+      const n = cluster.getChildCount();
+      let size = "small";
+      if (n >= 20) size = "large";
+      else if (n >= 6) size = "medium";
+      const tier = respondingCount > 0 ? "critical" : "low";
+      return L.divIcon({
+        html: '<div class="cluster-inner cluster-' + tier + '"><span>' + n + "</span></div>",
+        className: "marker-cluster marker-cluster-" + size,
+        iconSize: L.point(40, 40),
+      });
+    },
+  }).addTo(map);
   const unitMarkers = {}; // unit_id -> L.marker
   let lastUnitsData = null;
 
@@ -239,9 +275,10 @@
       if (m) {
         m.setLatLng([lat, lon]);
         m.setIcon(unitIcon(p));
+        m.options.unitStatus = p.status;
         m.getPopup() && m.getPopup().setContent(unitPopup(p));
       } else {
-        m = L.marker([lat, lon], { icon: unitIcon(p), zIndexOffset: 900 })
+        m = L.marker([lat, lon], { icon: unitIcon(p), zIndexOffset: 900, unitStatus: p.status })
           .bindPopup(unitPopup(p), { maxWidth: 260 });
         unitMarkers[p.unit_id] = m;
         patrolLayer.addLayer(m);
@@ -841,6 +878,7 @@
       });
   });
 
+  initMobileSidebar();
   initRegionFilters().then(initAuthWidget);
   initIhbarForm();
   connectUnitsWS();

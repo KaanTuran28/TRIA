@@ -1,5 +1,25 @@
 # TRIA C4I — Gerçek Zamanlı Kolluk İstihbarat Ağı
 
+## v2.9.1 — Harita/Mobil Kullanılabilirlik Düzeltmeleri (2026-07-16)
+
+Ekran görüntüsüyle denetlenince v2.8'in 81-il genişlemesinin fark edilmemiş üç yan etkisi
+bulundu, hepsi düzeltildi:
+
+- **Harita ulusal zoom'da okunmaz haldeydi**: 178 devriye birimi her zaman tekil ikon+etiketle
+  gösteriliyordu (kümeleme yoktu, sadece olay marker'ları kümeleniyordu). `c4i.js > patrolLayer`
+  artık zaten yüklü olan `leaflet.markercluster`'ı kullanıyor (`disableClusteringAtZoom: 11`) —
+  ülke genelinde yeşil/kırmızı sayı baloncukları, bir ile girince tekil birim+etiket.
+- **Mobilde harita tamamen kullanılamıyordu**: `map.css`'te hiç `@media` sorgusu yoktu, sidebar
+  sabit genişlikte + kapatılamaz bir overlay olarak haritanın tamamını kaplıyordu. `@media
+  (max-width:768px)` ile off-canvas + hamburger toggle (`#sidebarToggle`) eklendi.
+- **`/field` giriş yapılmadan tüm ülkenin personelini döküyordu**: `GET /personnel` auth
+  gerektirmiyor (bilinçli, bkz. v2.9) — ama sayfa bunu kontrolsüz render ediyordu, sonuç 356
+  kişilik tek sütun liste (~21.000px sayfa boyu). `field.py` artık `getAuth()` yoksa "giriş
+  yapın" mesajı gösteriyor, kapsam-sız roller için de 40 kişilik görüntüleme tavanı var.
+
+Playwright ile masaüstü + mobil ekran görüntüsü karşılaştırmasıyla doğrulandı (önce/sonra).
+Test sayısı değişmedi (101) — bunlar saf frontend/UX düzeltmeleri.
+
 > **Proje durumu (son güncelleme: 2026-07-16, v2.9):** Rol hiyerarşisi derinleşti (**ilçe_amiri**
 > + **merkez** salt-okunur rolü), her devriye birimine **personel/vardiya** (gündüz/gece) atandı,
 > tüm yazma işlemleri artık **audit log**'a düşüyor, uzun süredir çözülmeyen/eksik birimli kritik
