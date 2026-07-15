@@ -12,17 +12,19 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.auth import get_optional_user, require_admin, require_write_access, scope_city_for
+from app.core.auth import get_optional_user, require_admin, require_write_access, scope_city_for, scope_district_for
 from app.core.database import AsyncSessionLocal, get_db
+from app.modules.audit.service import log_audit
 from app.modules.auth.security import verify_token
 from app.modules.c4i.coverage import compute_coverage_report, nearest_unit_distance
 from app.modules.c4i.dispatch import compute_required_units, priority_score
-from app.modules.c4i.models import PoliceUnit, PoliceUnitHistory
+from app.modules.c4i.escalation import compute_escalations
+from app.modules.c4i.models import PoliceUnit, PoliceUnitHistory, Personnel
 from app.modules.c4i.performance import build_performance_report
 from app.modules.c4i.predictive import compute_predictive_score
 from app.modules.c4i.scorecard import build_scorecard
 from app.modules.c4i.seasonal import compute_monthly_breakdown, compute_seasonal_risers
-from app.modules.c4i.simulation import TICK_SECONDS, seed_police_units
+from app.modules.c4i.simulation import TICK_SECONDS, current_shift, seed_personnel, seed_police_units
 from app.modules.crime.district_lookup import list_districts, resolve_district
 from app.modules.crime.geometry_utils import crime_point_wkt, utcnow_naive
 from app.modules.crime.models import CrimeEvent
@@ -82,15 +84,18 @@ async def geo_districts(city: str = Query(...)):
 
 # ---------------------------------------------------------------- birimler
 
-async def _units_payload(db: AsyncSession, scope_city: str | None = None) -> dict:
+async def _units_payload(db: AsyncSession, scope_city: str | None = None, scope_district: str | None = None) -> dict:
     """Devriye birimlerinin anlik GeoJSON'u — REST ve WebSocket ayni ciktiyi paylasir.
 
-    scope_city verilirse (city_operator oturumu) yalnizca o ile ait birimler donulur —
-    sunucu tarafinda zorunlu kilinan sehir kisitlamasi (istemci tarafi filtre degil).
+    scope_city verilirse (city_operator/ilce_amiri oturumu) yalnizca o ile, scope_district
+    verilirse (ilce_amiri) yalnizca o ilceye ait birimler donulur — sunucu tarafinda zorunlu
+    kilinan kisitlama (istemci tarafi filtre degil).
     """
     conditions = [PoliceUnit.current_location.isnot(None)]
     if scope_city:
         conditions.append(func.lower(PoliceUnit.city) == scope_city)
+    if scope_district:
+        conditions.append(func.lower(PoliceUnit.district) == scope_district.strip().lower())
     rows = (
         await db.execute(
             select(
@@ -142,7 +147,7 @@ async def _units_payload(db: AsyncSession, scope_city: str | None = None) -> dic
 @router.get("/units")
 async def live_units(db: AsyncSession = Depends(get_db), user: dict | None = Depends(get_optional_user)):
     """Devriye birimlerinin anlik konumu (GeoJSON) — polling istemcileri icin."""
-    return await _units_payload(db, scope_city=scope_city_for(user))
+    return await _units_payload(db, scope_city=scope_city_for(user), scope_district=scope_district_for(user))
 
 
 @router.websocket("/ws/units")
@@ -155,10 +160,11 @@ async def ws_units(websocket: WebSocket, token: str | None = Query(default=None)
     await websocket.accept()
     user = verify_token(token) if token else None
     scope_city = scope_city_for(user)
+    scope_district = scope_district_for(user)
     try:
         while True:
             async with AsyncSessionLocal() as db:
-                payload = await _units_payload(db, scope_city=scope_city)
+                payload = await _units_payload(db, scope_city=scope_city, scope_district=scope_district)
             await websocket.send_json(payload)
             await asyncio.sleep(TICK_SECONDS)
     except (WebSocketDisconnect, RuntimeError):
@@ -202,10 +208,68 @@ async def unit_track_history(
 
 
 @router.post("/units/seed", dependencies=[Depends(require_admin)])
-async def reseed_units(db: AsyncSession = Depends(get_db)):
+async def reseed_units(db: AsyncSession = Depends(get_db), user: dict | None = Depends(get_optional_user)):
     """Devriye birimlerini sifirlayip yeniden olusturur."""
     created = await seed_police_units(db, force=True)
+    await log_audit(db, user, "units.seed", detail=f"units_created={created}")
     return {"status": "ok", "units_created": created}
+
+
+# ---------------------------------------------------------------- personel / vardiya
+
+@router.get("/personnel")
+async def list_personnel(
+    city: str | None = Query(default=None),
+    district: str | None = Query(default=None),
+    unit_id: str | None = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+    user: dict | None = Depends(get_optional_user),
+):
+    """Personel/vardiya listesi — su an gorevde olan vardiya isaretlenir.
+
+    city_operator/ilce_amiri oturumu varsa yalnizca kendi il/ilcesindeki personel donulur.
+    """
+    scope_city = scope_city_for(user)
+    scope_district = scope_district_for(user)
+    conditions = [Personnel.active.is_(True)]
+    effective_city = scope_city or (city.strip().lower() if city else None)
+    effective_district = scope_district or district
+    if effective_city:
+        conditions.append(func.lower(Personnel.city) == effective_city)
+    if effective_district:
+        conditions.append(func.lower(Personnel.district) == effective_district.strip().lower())
+    if unit_id:
+        conditions.append(Personnel.unit_id == unit_id)
+
+    rows = (
+        await db.execute(
+            select(
+                Personnel.full_name, Personnel.sicil_no, Personnel.rank, Personnel.unit_id,
+                Personnel.shift, Personnel.city, Personnel.district,
+            ).where(*conditions).order_by(Personnel.unit_id, Personnel.shift)
+        )
+    ).all()
+    on_duty_shift = current_shift()
+    return {
+        "on_duty_shift": on_duty_shift,
+        "count": len(rows),
+        "personnel": [
+            {
+                "full_name": r.full_name, "sicil_no": r.sicil_no, "rank": r.rank,
+                "unit_id": r.unit_id, "shift": r.shift, "city": r.city, "district": r.district,
+                "on_duty": r.shift == on_duty_shift,
+            }
+            for r in rows
+        ],
+    }
+
+
+@router.post("/personnel/seed", dependencies=[Depends(require_admin)])
+async def reseed_personnel(db: AsyncSession = Depends(get_db), user: dict | None = Depends(get_optional_user)):
+    """Personel rosterunu sifirlayip birim basina 2 vardiya (gunduz/gece) ile yeniden olusturur."""
+    created = await seed_personnel(db, force=True)
+    await log_audit(db, user, "personnel.seed", detail=f"personnel_created={created}")
+    return {"status": "ok", "personnel_created": created}
 
 
 # ---------------------------------------------------------------- ihbar girisi
@@ -267,6 +331,7 @@ async def report_incident(
     db.add(event)
     await db.commit()
     await db.refresh(event)
+    await log_audit(db, user, "incident.report", resource_type="crime_event", resource_id=str(event.id), city=city)
     return {"status": "ok", "incident_id": event.id, "timestamp": now.isoformat()}
 
 
@@ -421,6 +486,7 @@ async def dispatch_queue(db: AsyncSession = Depends(get_db), user: dict | None =
     from app.modules.c4i.dispatch import DISPATCH_MIN_SEVERITY, DISPATCH_WINDOW_MIN, eta_minutes, haversine_km
 
     scope_city = scope_city_for(user)
+    scope_district = scope_district_for(user)
     now = utcnow_naive()
     since = now - timedelta(minutes=DISPATCH_WINDOW_MIN)
     conditions = [
@@ -430,6 +496,8 @@ async def dispatch_queue(db: AsyncSession = Depends(get_db), user: dict | None =
     ]
     if scope_city:
         conditions.append(func.lower(CrimeEvent.city) == scope_city)
+    if scope_district:
+        conditions.append(func.lower(CrimeEvent.district) == scope_district.strip().lower())
     rows = (
         await db.execute(
             select(
@@ -548,7 +616,53 @@ async def resolve_incident(
                 "leg": 0, "t": 0.0,
             }
     await db.commit()
+    await log_audit(db, user, "incident.resolve", resource_type="crime_event", resource_id=str(incident_id), city=owner)
     return {"status": "resolved", "incident_id": incident_id, "released_units": released_units}
+
+
+@router.get("/analytics/escalations")
+async def escalations(
+    hours: int = Query(default=24, ge=1, le=168),
+    db: AsyncSession = Depends(get_db),
+    user: dict | None = Depends(get_optional_user),
+):
+    """Uzun suredir cozulmemis veya eksik birim atanmis kritik olaylar — in-app uyari panosu.
+
+    Kurallar app/modules/c4i/escalation.py > compute_escalations icinde saf fonksiyon olarak
+    tanimli (esik degerler orada): gecikmis_mudahale (>20 dk cozulmemis) / eksik_birim
+    (coklu-birim gerektirip >10 dk eksik atanmis).
+    """
+    from app.modules.c4i.dispatch import DISPATCH_MIN_SEVERITY
+
+    scope_city = scope_city_for(user)
+    scope_district = scope_district_for(user)
+    now = utcnow_naive()
+    since = now - timedelta(hours=hours)
+    conditions = [
+        CrimeEvent.timestamp >= since,
+        CrimeEvent.severity_score >= DISPATCH_MIN_SEVERITY,
+        CrimeEvent.resolved_at.is_(None),
+    ]
+    if scope_city:
+        conditions.append(func.lower(CrimeEvent.city) == scope_city)
+    if scope_district:
+        conditions.append(func.lower(CrimeEvent.district) == scope_district.strip().lower())
+    rows = (
+        await db.execute(
+            select(
+                CrimeEvent.id, CrimeEvent.city, CrimeEvent.district, CrimeEvent.severity_score,
+                CrimeEvent.timestamp, CrimeEvent.required_units, CrimeEvent.assigned_unit_ids,
+            ).where(*conditions)
+        )
+    ).all()
+    incidents = [
+        {
+            "id": r.id, "city": r.city, "district": r.district, "severity_score": r.severity_score,
+            "timestamp": r.timestamp, "required_units": r.required_units, "assigned_unit_ids": r.assigned_unit_ids,
+        }
+        for r in rows
+    ]
+    return {"window_hours": hours, "escalations": compute_escalations(incidents, now)}
 
 
 @router.get("/analytics/critical")

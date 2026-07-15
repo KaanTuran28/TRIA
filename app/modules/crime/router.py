@@ -6,8 +6,9 @@ from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.auth import get_optional_user, require_admin, scope_city_for
+from app.core.auth import get_optional_user, require_admin, scope_city_for, scope_district_for
 from app.core.database import get_db
+from app.modules.audit.service import log_audit
 from app.modules.crime.geojson_utils import rows_to_feature_collection
 from app.modules.crime.models import CrimeEvent, RawNewsArchive
 from app.modules.crime.schemas import CrimeStatsResponse
@@ -43,14 +44,18 @@ async def crime_geojson(
     db: AsyncSession = Depends(get_db),
     user: dict | None = Depends(get_optional_user),
 ):
-    """city_operator oturumu varsa yalnizca kendi iline ait olaylar dondurulur (zorunlu kisitlama)."""
+    """city_operator/ilce_amiri oturumu varsa yalnizca kendi il/ilcesine ait olaylar dondurulur
+    (zorunlu kisitlama)."""
     scope_city = scope_city_for(user)
+    scope_district = scope_district_for(user)
     if scope_city:
         city = scope_city
     since = datetime.utcnow() - timedelta(days=days)
     conditions = [CrimeEvent.location.isnot(None), CrimeEvent.timestamp >= since]
     if city:
         conditions.append(func.lower(CrimeEvent.city) == city.strip().lower())
+    if scope_district:
+        conditions.append(func.lower(CrimeEvent.district) == scope_district.strip().lower())
     rows = (
         await db.execute(
             select(
@@ -167,10 +172,11 @@ async def normalize_data(db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/clear", dependencies=[Depends(require_admin)])
-async def clear_data(db: AsyncSession = Depends(get_db)):
+async def clear_data(db: AsyncSession = Depends(get_db), user: dict | None = Depends(get_optional_user)):
     await db.execute(delete(CrimeEvent))
     await db.execute(delete(RawNewsArchive))
     await db.commit()
+    await log_audit(db, user, "data.clear")
     return {"message": "Tum suc verileri silindi."}
 
 

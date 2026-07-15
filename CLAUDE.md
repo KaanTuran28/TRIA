@@ -1,16 +1,56 @@
 # TRIA C4I — Gerçek Zamanlı Kolluk İstihbarat Ağı
 
-> **Proje durumu (son güncelleme: 2026-07-15, v2.8):** Platform **81 ilin tamamına** genişletildi
-> (önceden yalnızca 11 büyükşehir + Amasya tohumlanıyordu) — tohum devriye verisi TÜİK nüfusuna
-> orantılı üretiliyor, resmi 81 il plaka kodu tablosu ve `turkey-ilce.geojson`'dan türetilen
-> ilçe listeleri eklendi. Harita/admin panelindeki il-ilçe filtre dropdown'ları artık hardcode
-> değil, yeni `GET /geo/cities` + `GET /geo/districts` uçlarından dinamik dolduruluyor. Güvenlik
-> puan kartı artık gerçek bir **ulusal özet**: veri üretmeyen iller de `has_data=false` ile
-> listede kalıyor (soluk gösteriliyor), sadece olay/devriye kaydı olan birkaç il değil. **Bu faz
-> bilinçli olarak simülasyon/varsayım verisiyle inşa edildi** — gerçek 112/155 çağrı merkezi,
-> AVL/GPS, kamera/ANPR entegrasyonu vb. henüz yok (bkz. Bilinen Kısıtlar); amaç gerçek
-> entegrasyonlara hazır, ikna edici bir ulusal tasarım ortaya koymak.
-> **88 test** geçiyor.
+> **Proje durumu (son güncelleme: 2026-07-16, v2.9):** Rol hiyerarşisi derinleşti (**ilçe_amiri**
+> + **merkez** salt-okunur rolü), her devriye birimine **personel/vardiya** (gündüz/gece) atandı,
+> tüm yazma işlemleri artık **audit log**'a düşüyor, uzun süredir çözülmeyen/eksik birimli kritik
+> olaylar için **eskalasyon paneli** eklendi, `seasonal.py`'nin çok-yıl varsayımını test etmek
+> için **sentetik geçmiş veri üreticisi** (`scripts/`) yazıldı, ve saha ekipleri için mobil
+> optimize bir **`/field`** görünümü eklendi. **101 test** geçiyor. **Bu faz de bilinçli olarak
+> simülasyon/varsayım verisiyle inşa edildi** — gerçek personel/kimlik/SMS entegrasyonu yok,
+> hepsi mevcut mimarinin üzerine "gerçeğe bağlanmaya hazır" bir katman (bkz. Bilinen Kısıtlar).
+
+## v2.9 — Personel/Vardiya, Rol Hiyerarşisi, Audit Log, Eskalasyon, Sentetik Veri, Saha Görünümü (2026-07-16)
+
+- **Personel/vardiya modeli** (`app/modules/c4i/models.py > Personnel`, `simulation.py >
+  seed_personnel`/`current_shift`): her devriye birimine 2 personel atanıyor (gündüz 08:00-20:00
+  TRT + gece 20:00-08:00 TRT, sabit iki vardiyalı basit model). **Salt-okunur raporlama
+  katmanı** — dispatch/simülasyon mantığını *bilinçli olarak* etkilemiyor (mevcut, dinamik
+  doğrulamayla iki kez hata bulunmuş dispatch mantığına dokunmanın riskini almadık). Yeni
+  `GET /api/v1/personnel?city=&district=&unit_id=` (o an görevde olan vardiya işaretli).
+- **Rol hiyerarşisi genişledi** (`app/modules/auth/models.py`): `USER_ROLES` artık
+  `admin | city_operator | ilce_amiri | merkez`. `ilce_amiri` (`users.district` yeni kolon)
+  `city_operator`'ın ilçe düzeyine indirgenmiş hali; `merkez` tüm illeri GÖRÜR ama **salt-okunur**
+  (`require_write_access` dışında tutuluyor). `app/core/auth.py > scope_district_for` yeni —
+  `_units_payload` (REST+WS), `/geojson`, `/incidents/queue` bu filtreyi uyguluyor.
+  **Bilinçli sınırlama:** geri kalan analitik uçları (trends/corridors/predictive/vb.) hâlâ
+  yalnızca il düzeyinde kısıtlı, ilçe düzeyine indirilmedi — düşük risk/düşük öncelik (bkz. Yol
+  Haritası). 2 yeni demo hesap: `merzifon_amirlik` (ilçe_amiri, Amasya/Merzifon), `merkez`.
+- **Audit log** (`app/modules/audit/`): yeni `audit_log` tablosu + `log_audit()` — ihbar girişi,
+  olay kapatma, birim/personel reseed, veri temizleme, girişlerin hepsi kayıt altında (kim/ne
+  zaman/hangi il). `GET /api/v1/audit-log` (admin), admin panelinde kapalı `<details>` paneli.
+  Dış entegrasyon gerektirmiyor — KVKK'ya hazırlık amaçlı, gerçek bir saklama/silme politikası
+  henüz yok (bilinçli sınırlama, yol haritasında).
+- **Eskalasyon paneli** (`app/modules/c4i/escalation.py > compute_escalations`, saf fonksiyon):
+  20 dk'dan uzun süredir çözülmemiş VEYA çoklu-birim gerektirip 10 dk'dan uzun süredir eksik
+  atanmış kritik olayları işaretler. `GET /api/v1/analytics/escalations`. Harita sidebar'ında
+  ve admin panelinde "Eskalasyonlar" paneli (gerçek SMS/push kanalı yok — bilinçli olarak
+  in-app uyarı panosu, Telegram'ın v2.6'da kaldırılmasıyla aynı ruhta).
+- **Sentetik çok-yıllık geçmiş veri üreticisi** (`scripts/generate_synthetic_history.py`):
+  `seasonal.py`'nin "gerçek mevsimsellik için birden fazla yılın verisi gerekir" notunu test
+  etmek için — mevsimsel ağırlıklı (`kapkaç` yaz artışı, `gasp` kış artışı, `hırsızlık` düz
+  kontrol grubu), `source="synthetic_history"` etiketli, tüm zaman damgaları ≥60 gün öncesi
+  (aktif sevk/7-30 günlük pencereleri ETKİLEMEZ) ve `resolved_at` dolu üretilir. `--clear` ile
+  tek komutla geri temizlenir — **canlı demo veritabanına kalıcı olarak bırakılmadı**,
+  yalnızca doğrulama için bir kez çalıştırılıp temizlendi (bkz. doğrulama notu aşağıda).
+- **Saha ekibi mobil görünümü** (`GET /field`, `app/ui/field.py`): tek sütun, büyük dokunma
+  hedefli, mevcut `/personnel` + `/incidents/queue` + `/incidents/{id}/resolve` uçlarını tekrar
+  kullanan bir ön-tasarım — gerçek bir mobil istemci değil, "gerçek istemcinin sözleşmesi böyle
+  olabilir" gösterimi. Harita ve admin panelinden bağlantı eklendi.
+- 13 yeni test (88→101): `current_shift`, `compute_escalations`, rol/scope fonksiyonları
+  (`tests/test_auth.py`, yeni dosya) — `require_write_access`'in `merkez`'i reddettiği dahil.
+- **Bu fazın kapsamı dışında (bilinçli):** personel için gerçek kimlik doğrulama/rozet sistemi,
+  audit log saklama politikası, ilçe düzeyi kısıtlamanın tüm analitik uçlarına yayılması, gerçek
+  SMS/push bildirim kanalı — hepsi yol haritasında.
 
 ## v2.8 — Ulusal Kapsama: 81 İl Tohum Verisi, Dinamik İl/İlçe API'si, Ulusal Puan Kartı (2026-07-15)
 
@@ -218,7 +258,9 @@ WebSocket + piksel-fark analiziyle doğruladım. Bulgular:
 |---|---|
 | `app/modules/crime/` | OSINT olay hattı: scraper → Groq parse → geolocation → `crime_events` |
 | `app/modules/crime/population.py` | TÜİK ADNKS 2025 il nüfusları (81 il), `per_100k()` normalizasyon |
-| `app/modules/c4i/models.py` | `police_units` (+ `district`, `unit_type` sözlüğü), `police_unit_history` (iz sürme) |
+| `app/modules/c4i/models.py` | `police_units` (+ `district`, `unit_type` sözlüğü), `police_unit_history` (iz sürme), `Personnel`/`SHIFTS` (personel/vardiya) |
+| `app/modules/c4i/escalation.py` | Uzun süredir çözülmemiş/eksik-birim kritik olay tespiti (saf fonksiyon, `/analytics/escalations`) |
+| `app/modules/audit/` | `audit_log` tablosu + `log_audit()` — yazma işlemlerinin denetim kaydı (`/audit-log`, admin) |
 | `app/modules/c4i/simulation.py` | 3 sn tick: patrol/dispatch/onscene 3 modlu hareket motoru + 60 sn'de bir geçmiş snapshot |
 | `app/modules/c4i/dispatch.py` | Öncelik kuyruğu, haversine, ETA, çoklu-birim atama (`select_next_unit` — tür çeşitliliği), `assigned_unit_ids` (kümülatif) |
 | `app/modules/c4i/predictive.py` | Kural-tabanlı erken uyarı skoru (bkz. Prediktif Risk bölümü) |
@@ -229,7 +271,7 @@ WebSocket + piksel-fark analiziyle doğruladım. Bulgular:
 | `app/modules/crime/district_lookup.py` | `turkey-ilce.geojson` ile point-in-polygon ilçe çözümleme (shapely) |
 | `app/modules/c4i/router.py` | `/units`, `/ws/units`, `/units/{id}/history`, `/analytics/*` (+ `breakdown`/`districts`/`scorecard`/`seasonal`), `/incidents/queue`, `/incidents/report`, `/incidents/{id}/resolve` |
 | `app/modules/crime/spatial.py` | PostGIS çokgen/yarıçap sorgusu (`/api/v1/incidents/spatial-search`) — eski `app/api/v1/` buradan v2.4'te taşındı |
-| `app/modules/auth/` | `users` tablosu, PBKDF2 hash + imzalı token (`security.py`), `/api/v1/auth/login`, demo hesap seed |
+| `app/modules/auth/` | `users` tablosu (+ `district`), PBKDF2 hash + imzalı token (`security.py`), roller: `admin\|city_operator\|ilce_amiri\|merkez`, `/api/v1/auth/login`, demo hesap seed |
 | `app/scrapers/ibb_ingestor.py` | İBB CKAN trafik duyuru ingestor'u |
 | `alembic/` | Şema migrasyonları (baseline + dispatch/arrival/performans/district/users/çoklu-birim alanları uygulandı) |
 | `frontend/static/geo/turkey-il.geojson` | 81 il sınırı (OSM, sadeleştirilmiş, ~225 KB) |
@@ -237,6 +279,7 @@ WebSocket + piksel-fark analiziyle doğruladım. Bulgular:
 | `frontend/static/js/c4i.js` | Devriye katmanı (WS+polling), il/ilçe choropleth, bölge+birim-tipi filtresi, auth widget, trend/koridor/prediktif/performans/kapsama panelleri |
 | `app/ui/admin.py` | Admin panel — sevk kuyruğu kartı, İBB tetikleme butonu, ihbar giriş formu, auth widget |
 | `app/ui/login.py` | `/login` sayfası |
+| `app/ui/field.py` | `/field` — saha ekibi mobil görünümü (personel/vardiya + sevk kuyruğu, mevcut uçları tekrar kullanır) |
 | `scripts/` | Bağımsız CLI araçları (bkz. "Yardımcı Scriptler" bölümü) — `pytest`'e dahil değil |
 
 ## Veri Modeli Notları
@@ -278,6 +321,7 @@ Bunlar `pytest`'in parçası değil — çalışan bir instance'a karşı manuel
 | `probe_telegram.py [OUT_FILE]` | Telegram kanal adaylarının hangisinin canlı olduğunu tarar |
 | `run_scrape_poll.py` | `/scrape` tetikler, `/scraper/metrics`'i bitene kadar izler |
 | `normalize_crime_db.py` | Mevcut `crime_events` kayıtlarını normalize eder (kategori + konum) |
+| `generate_synthetic_history.py` | Mevsimsel ağırlıklı, `source="synthetic_history"` etiketli çok-yıllık sentetik geçmiş veri üretir/temizler (`--years`/`--clear`) — `seasonal.py`'yi test etmek için |
 
 ## Analitik Kuralları
 
@@ -363,17 +407,18 @@ Haritası" veri seti bulundu (farklı şema — yoğunluk/hız, olay değil) —
 7. [ ] Performans KPI'ları admin panelinde de göster (güvenlik puan kartı orada ama ayrı bir şey —
        sevk gecikmesi/seyahat/sahne süresi detay KPI'ları hâlâ sadece harita sidebar'ında)
 8. [x] ~~81 il için tohum verisi (birim/plaka/ilçe) + dinamik il/ilçe filtre API'si~~ — v2.8'de yapıldı
-9. [ ] Personel/vardiya modeli (`police_units`'e personel ataması + gündüz/gece nöbet) — simülasyon
-       verisiyle bile dispatch mantığına "o an nöbette mi" boyutu katar
-10. [ ] Rol hiyerarşisi derinleştirme (il emniyet müdürü / ilçe amiri / merkez rolleri, gerçek
-        SSO olmadan demo hesaplarla) — mevcut `admin`/`city_operator` ikilisinin ötesi
-11. [ ] Audit log (kim ne zaman hangi olayı görüntüledi/kapattı) — dış entegrasyon gerektirmez,
-        KVKK'ya hazırlık olarak şimdiden gerçek şekilde inşa edilebilir
-12. [ ] Kritik/uzun süredir çözülmeyen olaylar için in-app eskalasyon/bildirim paneli
-13. [ ] `police_unit_history` üzerinden çok-yıllı sentetik geçmiş veri üretici — `seasonal.py`/
-        `predictive.py`'nin gerçek mevsimsellik notunu şimdiden test etmek için
-14. [ ] Saha ekibi için responsive/mobil-optimize görünüm (`/field` gibi) — simüle GPS onayı +
-        olay notu girişiyle gerçek mobil istemcinin sözleşmesini önceden şekillendirir
+9. [x] ~~Personel/vardiya modeli~~ — v2.9'da yapıldı (salt-okunur roster, dispatch'i etkilemiyor)
+10. [x] ~~Rol hiyerarşisi derinleştirme (ilçe_amiri + merkez)~~ — v2.9'da yapıldı
+11. [x] ~~Audit log~~ — v2.9'da yapıldı (saklama politikası hâlâ eksik, madde 15)
+12. [x] ~~Eskalasyon/bildirim paneli~~ — v2.9'da yapıldı (in-app, gerçek SMS/push değil)
+13. [x] ~~Sentetik çok-yıllı geçmiş veri üretici~~ — v2.9'da yapıldı (`scripts/generate_synthetic_history.py`)
+14. [x] ~~Saha ekibi mobil görünümü~~ — v2.9'da yapıldı (`/field`, gerçek mobil istemci değil)
+15. [ ] Audit log saklama/silme politikası (KVKK) — şu an sınırsız birikiyor
+16. [ ] `ilce_amiri` kısıtlamasını kalan analitik uçlarına (trends/corridors/predictive/seasonal/
+        scorecard) da yay — şu an yalnızca `/units`, `/geojson`, `/incidents/queue` ilçe filtreli
+17. [ ] Personel icin gercek kimlik dogrulama/rozet sistemi (su an sadece roster verisi, giris
+        kimligiyle iliskili degil)
+18. [ ] Eskalasyon panelinde gercek bildirim kanali (SMS/push) — su an yalnizca in-app panel
 
 ## Proje Düzeni (v2.4 dosya yapısı denetimi, 2026-07-13)
 

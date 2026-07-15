@@ -30,6 +30,19 @@
     window.location.reload();
   }
 
+  function lockDistrictWhenReady(districtName, attemptsLeft) {
+    const districtSel = document.getElementById("filterDistrict");
+    if (!districtSel || attemptsLeft <= 0) return;
+    const hasOption = Array.from(districtSel.options).some(function (o) { return o.value === districtName; });
+    if (hasOption) {
+      districtSel.value = districtName;
+      districtSel.disabled = true;
+      districtSel.dispatchEvent(new Event("change"));
+    } else {
+      setTimeout(function () { lockDistrictWhenReady(districtName, attemptsLeft - 1); }, 300);
+    }
+  }
+
   function initAuthWidget() {
     const el = document.getElementById("authWidget");
     if (!el) return;
@@ -38,12 +51,17 @@
       el.innerHTML = '<a href="/login">Giriş Yap</a>';
       return;
     }
-    const scope = a.city ? a.city.charAt(0).toLocaleUpperCase("tr") + a.city.slice(1) : "Tüm İller";
+    const cityLabel = a.city ? (CITY_LABELS[a.city] || a.city) : null;
+    let scope = "Tüm İller";
+    if (a.role === "merkez") scope = "Tüm İller (Salt Okunur)";
+    else if (a.role === "ilce_amiri" && cityLabel) scope = cityLabel + " / " + (a.district || "—");
+    else if (cityLabel) scope = cityLabel;
     el.innerHTML =
       '<span style="color:var(--text)">' + (a.display_name || a.username) + " · " + scope + "</span> " +
       '<button onclick="triaLogout()">Çıkış</button>';
     window.triaLogout = logout;
-    if (a.role === "city_operator" && a.city) {
+
+    if ((a.role === "city_operator" || a.role === "ilce_amiri") && a.city) {
       const citySel = document.getElementById("filterCity");
       if (citySel) {
         citySel.value = a.city;
@@ -52,6 +70,20 @@
       }
       const mapCityInput = document.getElementById("mapIhbarCity");
       if (mapCityInput) { mapCityInput.value = a.city; mapCityInput.disabled = true; }
+      if (a.role === "ilce_amiri" && a.district) {
+        lockDistrictWhenReady(a.district, 15);
+        const mapDistrictInput = document.getElementById("mapIhbarDistrict");
+        if (mapDistrictInput) { mapDistrictInput.value = a.district; mapDistrictInput.disabled = true; }
+      }
+    }
+
+    if (a.role === "merkez") {
+      const form = document.getElementById("mapIhbarForm");
+      if (form) {
+        form.querySelectorAll("input, select, button").forEach(function (elx) { elx.disabled = true; });
+        const log = document.getElementById("mapIhbarLog");
+        if (log) log.textContent = "Merkez izleme rolü salt okunurdur — ihbar girişi yapılamaz.";
+      }
     }
   }
 
@@ -680,6 +712,30 @@
     } catch (e) { /* sessiz */ }
   }
 
+  async function pollEscalations() {
+    try {
+      const data = await fetch("/api/v1/analytics/escalations", { headers: authHeader() }).then((r) => r.json());
+      const el = document.getElementById("escalationList");
+      if (!el) return;
+      const items = (data.escalations || []).slice(0, 5);
+      if (!items.length) {
+        el.innerHTML = '<span class="cat-empty">Eskalasyon gerektiren olay yok</span>';
+        return;
+      }
+      const REASON_TR = { gecikmis_mudahale: "Gecikmiş müdahale", eksik_birim: "Eksik birim" };
+      el.innerHTML = items
+        .map(function (e) {
+          return (
+            '<div class="trend-row trend-corridor"><span class="trend-city">#' +
+            e.id + " · " + (e.city || "—") + "</span>" +
+            '<span class="trend-nums">' + e.age_minutes + " dk · " + e.reasons.map((r) => REASON_TR[r] || r).join(", ") + "</span>" +
+            '<span class="trend-pct" style="color:var(--danger)">' + e.escalation_score + "</span></div>"
+          );
+        })
+        .join("");
+    } catch (e) { /* sessiz */ }
+  }
+
   // ---------------------------------------------------------- mevsimsel / gecmis suc istatistigi
 
   async function pollSeasonal() {
@@ -793,6 +849,7 @@
   pollCritical();
   pollPerformance();
   pollCoverage();
+  pollEscalations();
   pollBreakdown();
   pollDistrictList();
   pollSeasonal();
@@ -803,6 +860,7 @@
   setInterval(pollCritical, CRITICAL_POLL_MS);
   setInterval(pollPerformance, TREND_POLL_MS);
   setInterval(pollCoverage, TREND_POLL_MS);
+  setInterval(pollEscalations, TREND_POLL_MS);
   setInterval(pollBreakdown, TREND_POLL_MS);
   setInterval(pollDistrictList, TREND_POLL_MS);
   setInterval(pollSeasonal, TREND_POLL_MS);

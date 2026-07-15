@@ -15,7 +15,7 @@ from sqlalchemy import func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import AsyncSessionLocal
-from app.modules.c4i.models import UNIT_TYPES, PoliceUnit, PoliceUnitHistory
+from app.modules.c4i.models import SHIFTS, UNIT_TYPES, Personnel, PoliceUnit, PoliceUnitHistory
 from app.modules.crime.district_lookup import list_districts
 from app.modules.crime.models import CrimeEvent
 from app.modules.crime.population import POPULATION_2025
@@ -61,6 +61,13 @@ PLATE_CODES = {
 # turkey-ilce.geojson'dan (district_lookup) turetilir — 76/81 il bu kaynakta var;
 # geriye kalan 5 il (bkz. district_lookup) icin tek "<Il> Merkez" ilcesi varsayilir.
 CITY_DISTRICTS = {city: districts for city in POPULATION_2025 if (districts := list_districts(city))}
+
+# Amasya, dokumantasyon boyunca referans il/ilce senaryosu (Amasya -> Merzifon, bkz.
+# docs/PLAN_ASAYIS_PLATFORMU.md) ve demo hesap `merzifon_amirlik` (v2.9) buna dayanir —
+# nufus formulu 2 birim veriyor ama Amasya'nin 7 ilcesi var, round-robin bu kadar az
+# birimle Merzifon'a (alfabetik 5.) hic ulasmiyor. Demo senaryonun anlamli kalmasi icin
+# taban yukseltildi; diger 80 il saf nufus formulunu kullanmaya devam ediyor.
+SEED_PLAN["amasya"] = max(SEED_PLAN["amasya"], len(CITY_DISTRICTS.get("amasya", [])))
 
 
 def _district_for(city: str, i: int) -> str:
@@ -111,6 +118,72 @@ async def seed_police_units(db: AsyncSession, force: bool = False) -> int:
             created += 1
     await db.commit()
     logger.info("C4I: %s devriye birimi olusturuldu", created)
+    return created
+
+
+# ---------------------------------------------------------------- personel / vardiya
+
+_FIRST_NAMES = [
+    "Mehmet", "Ahmet", "Mustafa", "Ali", "Hüseyin", "Hasan", "İbrahim", "Ayşe", "Fatma",
+    "Emine", "Zeynep", "Elif", "Murat", "Emre", "Burak", "Caner", "Serkan", "Kemal",
+    "Osman", "Yusuf", "Merve", "Sena", "Hakan", "Volkan",
+]
+_LAST_NAMES = [
+    "Yılmaz", "Kaya", "Demir", "Çelik", "Şahin", "Yıldız", "Yıldırım", "Öztürk", "Aydın",
+    "Özdemir", "Arslan", "Doğan", "Kılıç", "Aslan", "Çetin", "Kara", "Koç", "Kurt",
+    "Özkan", "Şimşek",
+]
+_RANKS = ["Polis Memuru", "Polis Memuru", "Polis Memuru", "Kıdemli Polis Memuru", "Başpolis Memuru", "Komiser Yardımcısı"]
+
+TRT_UTC_OFFSET_HOURS = 3  # Turkiye saati sabit UTC+3 (yaz saati uygulamasi yok)
+DAY_SHIFT_START_HOUR = 8
+DAY_SHIFT_END_HOUR = 20
+
+
+def current_shift(now_utc: datetime | None = None) -> str:
+    """Verilen (varsayilan: simdiki) UTC zamanina gore TRT'de hangi vardiyanin gorevde oldugu.
+
+    08:00-20:00 TRT "gunduz", 20:00-08:00 TRT "gece" — sabit iki vardiyali basit model
+    (gercek sistemde 3 vardiya / esnek nobet cizelgesi olabilir, bkz. CLAUDE.md v2.9).
+    """
+    now_utc = now_utc or datetime.utcnow()
+    trt_hour = (now_utc.hour + TRT_UTC_OFFSET_HOURS) % 24
+    return "gunduz" if DAY_SHIFT_START_HOUR <= trt_hour < DAY_SHIFT_END_HOUR else "gece"
+
+
+async def seed_personnel(db: AsyncSession, force: bool = False) -> int:
+    """Her devriye birimine 2 personel atar (gunduz + gece vardiyasi), tablo bossa calisir.
+
+    Salt-okunur roster verisi — dispatch/simulasyon mantigini etkilemez (bkz. Personnel modeli).
+    """
+    existing = (await db.execute(select(func.count()).select_from(Personnel))).scalar_one()
+    if existing and not force:
+        return 0
+    if force:
+        await db.execute(text("DELETE FROM personnel"))
+
+    units = (
+        await db.execute(select(PoliceUnit.unit_id, PoliceUnit.city, PoliceUnit.district))
+    ).all()
+
+    created = 0
+    for idx, unit in enumerate(units):
+        for shift in SHIFTS:
+            created += 1
+            db.add(
+                Personnel(
+                    full_name=f"{random.choice(_FIRST_NAMES)} {random.choice(_LAST_NAMES)}",
+                    sicil_no=f"{100000 + created:06d}",
+                    rank=random.choice(_RANKS),
+                    unit_id=unit.unit_id,
+                    shift=shift,
+                    city=unit.city,
+                    district=unit.district,
+                    active=True,
+                )
+            )
+    await db.commit()
+    logger.info("C4I: %s personel olusturuldu (birim basina 2 vardiya)", created)
     return created
 
 

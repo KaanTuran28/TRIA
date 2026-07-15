@@ -100,6 +100,7 @@ ADMIN_HTML = f"""<!DOCTYPE html>
       </div>
       <div style="display:flex;align-items:center;gap:10px">
         <div class="status-pill" id="systemStatus">sistem kontrol ediliyor…</div>
+        <a href="/field" class="btn" style="padding:5px 10px;font-size:11.5px">Saha Görünümü</a>
         <div id="authWidget"></div>
       </div>
     </header>
@@ -202,6 +203,26 @@ ADMIN_HTML = f"""<!DOCTYPE html>
       </section>
 
       <details class="panel" style="margin-top:14px">
+        <summary>Eskalasyonlar</summary>
+        <div class="panel-body">
+          <p class="desc" style="font-size:11.5px;color:var(--muted);margin:0 0 10px">
+            Uzun süredir çözülmeyen veya eksik birim atanmış kritik olaylar — otomatik in-app uyarı.
+          </p>
+          <div id="escalationTable" style="overflow-x:auto"></div>
+        </div>
+      </details>
+
+      <details class="panel" style="margin-top:14px">
+        <summary>Denetim Kaydı (Audit Log)</summary>
+        <div class="panel-body">
+          <p class="desc" style="font-size:11.5px;color:var(--muted);margin:0 0 10px">
+            Kim, ne zaman, hangi yazma işlemini yaptı — yalnızca admin görür. Son 50 kayıt.
+          </p>
+          <div id="auditLogTable" style="overflow-x:auto"></div>
+        </div>
+      </details>
+
+      <details class="panel" style="margin-top:14px">
         <summary>Geliştirici / API Testleri</summary>
         <div class="panel-body">
           <div class="grid api-grid">
@@ -291,14 +312,26 @@ ADMIN_HTML = f"""<!DOCTYPE html>
         el.innerHTML = '<a class="btn btn-primary" href="/login">Giriş Yap</a>';
         return;
       }}
-      const scope = a.city ? a.city.charAt(0).toLocaleUpperCase('tr') + a.city.slice(1) : 'Tüm İller';
+      const cityLabel = a.city ? a.city.charAt(0).toLocaleUpperCase('tr') + a.city.slice(1) : null;
+      let scope = 'Tüm İller';
+      if (a.role === 'merkez') scope = 'Tüm İller (Salt Okunur)';
+      else if (a.role === 'ilce_amiri' && cityLabel) scope = cityLabel + ' / ' + (a.district || '—');
+      else if (cityLabel) scope = cityLabel;
       el.innerHTML =
         '<span style="font-size:12px;color:var(--muted)">' + (a.display_name || a.username) +
         ' · <b style="color:var(--text)">' + scope + '</b></span> ' +
         '<button class="btn" style="padding:5px 10px;font-size:11.5px" onclick="logout()">Çıkış</button>';
-      if (a.role === 'city_operator' && a.city) {{
+      if ((a.role === 'city_operator' || a.role === 'ilce_amiri') && a.city) {{
         const cityInput = document.getElementById('ihbarCity');
         if (cityInput) {{ cityInput.value = a.city; cityInput.disabled = true; }}
+        if (a.role === 'ilce_amiri' && a.district) {{
+          const districtInput = document.getElementById('ihbarDistrict');
+          if (districtInput) {{ districtInput.value = a.district; districtInput.disabled = true; }}
+        }}
+      }}
+      if (a.role === 'merkez') {{
+        const form = document.querySelector('form.ihbar-form');
+        if (form) form.querySelectorAll('input, select, button, textarea').forEach(function (elx) {{ elx.disabled = true; }});
       }}
     }}
     renderAuthWidget();
@@ -536,11 +569,77 @@ ADMIN_HTML = f"""<!DOCTYPE html>
       }}
     }}
 
+    async function loadEscalations() {{
+      const el = document.getElementById('escalationTable');
+      if (!el) return;
+      try {{
+        const r = await fetch('/api/v1/analytics/escalations', {{ headers: authHeader() }});
+        const data = await r.json();
+        const items = data.escalations || [];
+        if (!items.length) {{
+          el.innerHTML = '<span style="font-size:12px;color:var(--muted)">Eskalasyon gerektiren olay yok.</span>';
+          return;
+        }}
+        const REASON_TR = {{ gecikmis_mudahale: 'Gecikmiş müdahale', eksik_birim: 'Eksik birim' }};
+        const rows = items.map(function (e) {{
+          return (
+            '<tr><td class="num">#' + e.id + '</td><td>' + (e.city || '—') + '</td>' +
+            '<td>' + (e.district || '—') + '</td><td class="num">' + e.age_minutes + ' dk</td>' +
+            '<td class="num">' + e.assigned_count + '/' + e.required_units + '</td>' +
+            '<td style="color:var(--danger)">' + e.reasons.map(function (r) {{ return REASON_TR[r] || r; }}).join(', ') + '</td></tr>'
+          );
+        }}).join('');
+        el.innerHTML =
+          '<table class="scorecard"><thead><tr><th>Olay</th><th>İl</th><th>İlçe</th><th>Yaş</th><th>Birim</th><th>Neden</th></tr></thead>' +
+          '<tbody>' + rows + '</tbody></table>';
+      }} catch (e) {{
+        el.innerHTML = '<span style="font-size:12px;color:var(--muted)">Eskalasyon verisi okunamadı.</span>';
+      }}
+    }}
+
+    async function loadAuditLog() {{
+      const el = document.getElementById('auditLogTable');
+      if (!el) return;
+      try {{
+        const auth = authHeader();
+        const key = adminKey();
+        const headers = auth.Authorization ? auth : (key ? {{ 'X-Admin-Key': key }} : {{}});
+        const r = await fetch('/api/v1/audit-log?limit=50', {{ headers }});
+        if (r.status === 401 || r.status === 403) {{
+          el.innerHTML = '<span style="font-size:12px;color:var(--muted)">Bu panel yalnızca admin girişiyle görüntülenebilir.</span>';
+          return;
+        }}
+        const data = await r.json();
+        const entries = data.entries || [];
+        if (!entries.length) {{
+          el.innerHTML = '<span style="font-size:12px;color:var(--muted)">Henüz kayıt yok.</span>';
+          return;
+        }}
+        const rows = entries.map(function (e) {{
+          const when = new Date(e.created_at).toLocaleString('tr-TR');
+          return (
+            '<tr><td class="num">' + when + '</td><td>' + (e.username || '—') + '</td>' +
+            '<td>' + e.action + '</td><td>' + (e.city || '—') + '</td>' +
+            '<td>' + (e.resource_type ? e.resource_type + ' #' + (e.resource_id || '') : (e.detail || '—')) + '</td></tr>'
+          );
+        }}).join('');
+        el.innerHTML =
+          '<table class="scorecard"><thead><tr><th>Zaman</th><th>Kullanıcı</th><th>İşlem</th><th>İl</th><th>Detay</th></tr></thead>' +
+          '<tbody>' + rows + '</tbody></table>';
+      }} catch (e) {{
+        el.innerHTML = '<span style="font-size:12px;color:var(--muted)">Denetim kaydı okunamadı.</span>';
+      }}
+    }}
+
     refreshAll();
     refreshDispatchQueue();
     loadScorecard();
+    loadAuditLog();
+    loadEscalations();
     setInterval(refreshDispatchQueue, 20000);
     setInterval(loadScorecard, 60000);
+    setInterval(loadAuditLog, 30000);
+    setInterval(loadEscalations, 30000);
   </script>
 </body>
 </html>"""

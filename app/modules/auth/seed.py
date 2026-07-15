@@ -16,11 +16,13 @@ from app.modules.auth.security import hash_password
 
 logger = logging.getLogger("tria.auth.seed")
 
-# (username, role, city, display_name, sifre-env-degiskeni, varsayilan sifre)
+# (username, role, city, district, display_name, sifre-env-degiskeni, varsayilan sifre)
 _DEMO_ACCOUNTS = [
-    ("admin", "admin", None, "Genel Yönetici", "DEMO_ADMIN_PASSWORD", "admin123"),
-    ("amasya_asayis", "city_operator", "amasya", "Amasya İl Asayiş Yönetimi", "DEMO_AMASYA_PASSWORD", "amasya123"),
-    ("istanbul_asayis", "city_operator", "istanbul", "İstanbul İl Asayiş Yönetimi", "DEMO_ISTANBUL_PASSWORD", "istanbul123"),
+    ("admin", "admin", None, None, "Genel Yönetici", "DEMO_ADMIN_PASSWORD", "admin123"),
+    ("amasya_asayis", "city_operator", "amasya", None, "Amasya İl Asayiş Yönetimi", "DEMO_AMASYA_PASSWORD", "amasya123"),
+    ("istanbul_asayis", "city_operator", "istanbul", None, "İstanbul İl Asayiş Yönetimi", "DEMO_ISTANBUL_PASSWORD", "istanbul123"),
+    ("merzifon_amirlik", "ilce_amiri", "amasya", "Merzifon", "Merzifon İlçe Emniyet Amirliği", "DEMO_MERZIFON_PASSWORD", "merzifon123"),
+    ("merkez", "merkez", None, None, "EGM Merkez İzleme (Salt Okunur)", "DEMO_MERKEZ_PASSWORD", "merkez123"),
 ]
 
 
@@ -30,7 +32,7 @@ async def seed_demo_users(db: AsyncSession) -> int:
         return 0
 
     created = 0
-    for username, role, city, display_name, env_key, default_pw in _DEMO_ACCOUNTS:
+    for username, role, city, district, display_name, env_key, default_pw in _DEMO_ACCOUNTS:
         password = os.getenv(env_key, default_pw)
         db.add(
             User(
@@ -38,6 +40,7 @@ async def seed_demo_users(db: AsyncSession) -> int:
                 password_hash=hash_password(password),
                 role=role,
                 city=city,
+                district=district,
                 display_name=display_name,
             )
         )

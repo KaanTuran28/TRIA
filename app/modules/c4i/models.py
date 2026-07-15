@@ -3,7 +3,7 @@
 from datetime import datetime
 
 from geoalchemy2 import Geometry
-from sqlalchemy import Column, DateTime, Float, Integer, String
+from sqlalchemy import Boolean, Column, DateTime, Float, Integer, String
 from sqlalchemy.dialects.postgresql import JSONB
 
 from app.core.database import Base
@@ -40,6 +40,29 @@ class PoliceUnit(Base):
     assigned_route = Column(JSONB, nullable=True)
     speed_kmh = Column(Float, nullable=False, default=40.0)
     last_update = Column(DateTime, nullable=True, default=datetime.utcnow)
+
+
+SHIFTS = ("gunduz", "gece")  # 08:00-20:00 / 20:00-08:00 (TRT, UTC+3)
+
+
+class Personnel(Base):
+    """Devriye personeli — birim basina vardiya (gunduz/gece) atamasi.
+
+    Salt-okunur raporlama katmanidir: dispatch/simulasyon mantigini etkilemez, yalnizca
+    "hangi birimde kim, hangi vardiyada gorevli" sorusuna cevap verir (bkz. CLAUDE.md v2.9).
+    """
+
+    __tablename__ = "personnel"
+
+    id = Column(Integer, primary_key=True, index=True)
+    full_name = Column(String, nullable=False)
+    sicil_no = Column(String, unique=True, index=True, nullable=False)
+    rank = Column(String, nullable=False, default="Polis Memuru")
+    unit_id = Column(String, index=True, nullable=True)  # PoliceUnit.unit_id (gevsek referans)
+    shift = Column(String, nullable=False, default="gunduz")  # bkz. SHIFTS
+    city = Column(String, nullable=True, index=True)
+    district = Column(String, nullable=True, index=True)
+    active = Column(Boolean, nullable=False, default=True)
 
 
 class PoliceUnitHistory(Base):

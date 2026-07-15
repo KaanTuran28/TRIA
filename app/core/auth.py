@@ -14,9 +14,20 @@ async def get_optional_user(authorization: str | None = Header(default=None)) ->
 
 
 def scope_city_for(user: dict | None) -> str | None:
-    """city_operator icin kendi ilini, admin/anonim icin None (kisitlama yok) dondurur."""
-    if user and user.get("role") == "city_operator":
+    """city_operator/ilce_amiri icin kendi ilini, digerleri icin None (kisitlama yok) dondurur.
+
+    merkez rolu de None doner (tum illeri GORUR, ama yazma yetkisi require_write_access'te
+    ayrica engellenir — bkz. asagisi).
+    """
+    if user and user.get("role") in ("city_operator", "ilce_amiri"):
         return (user.get("city") or "").strip().lower() or None
+    return None
+
+
+def scope_district_for(user: dict | None) -> str | None:
+    """ilce_amiri icin kendi ilcesini, digerleri icin None (ilce kisitlamasi yok) dondurur."""
+    if user and user.get("role") == "ilce_amiri":
+        return (user.get("district") or "").strip() or None
     return None
 
 
@@ -54,11 +65,13 @@ async def require_write_access(
 ) -> dict | None:
     """Ihbar girisi / olay kapatma gibi sehir-operasyonel yazma islemleri.
 
-    Admin (rol veya X-Admin-Key) her ile yazabilir; city_operator sadece kendi iline
-    (asil sehir karsilastirmasi endpoint icinde scope_city_for ile yapilir). Gecerli
-    oturum/anahtar yoksa (ve ADMIN_API_KEY ayarliysa) 401 doner.
+    Admin (rol veya X-Admin-Key) her ile yazabilir; city_operator/ilce_amiri sadece kendi
+    il/ilcesine (asil kisitlama endpoint icinde scope_city_for/scope_district_for ile
+    yapilir). merkez rolu SALT-OKUNUR — buraya dahil degil, gecerli token olsa bile
+    ADMIN_API_KEY yoksa 401 alir. Gecerli oturum/anahtar yoksa (ve ADMIN_API_KEY ayarliysa)
+    401 doner.
     """
-    if user and user.get("role") in ("admin", "city_operator"):
+    if user and user.get("role") in ("admin", "city_operator", "ilce_amiri"):
         return user
     expected = os.getenv("ADMIN_API_KEY", "").strip()
     if not expected:

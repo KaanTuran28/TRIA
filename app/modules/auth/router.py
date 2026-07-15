@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import get_optional_user
 from app.core.database import get_db
+from app.modules.audit.service import log_audit
 from app.modules.auth.models import User
 from app.modules.auth.security import sign_token, verify_password
 
@@ -25,6 +26,7 @@ def _user_public(user: User) -> dict:
         "username": user.username,
         "role": user.role,
         "city": user.city,
+        "district": user.district,
         "display_name": user.display_name,
     }
 
@@ -35,7 +37,8 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
     user = (await db.execute(select(User).where(User.username == username))).scalar_one_or_none()
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Kullanıcı adı veya şifre hatalı.")
-    token = sign_token({"sub": user.username, "role": user.role, "city": user.city})
+    token = sign_token({"sub": user.username, "role": user.role, "city": user.city, "district": user.district})
+    await log_audit(db, {"sub": user.username, "role": user.role}, "auth.login", city=user.city)
     return {"token": token, **_user_public(user)}
 
 
@@ -43,4 +46,7 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
 async def me(user: dict | None = Depends(get_optional_user)):
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Oturum yok.")
-    return {"username": user.get("sub"), "role": user.get("role"), "city": user.get("city")}
+    return {
+        "username": user.get("sub"), "role": user.get("role"),
+        "city": user.get("city"), "district": user.get("district"),
+    }

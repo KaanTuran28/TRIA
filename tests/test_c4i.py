@@ -5,6 +5,7 @@ from types import SimpleNamespace
 from datetime import datetime, timedelta
 
 from app.modules.c4i.coverage import compute_coverage_report, nearest_unit_distance
+from app.modules.c4i.escalation import compute_escalations
 from app.modules.c4i.dispatch import (
     MULTI_UNIT_COUNT,
     MULTI_UNIT_SEVERITY_THRESHOLD,
@@ -25,6 +26,7 @@ from app.modules.c4i.router import _cache_get, _cache_put, pct_change
 from app.modules.c4i.models import UNIT_TYPES
 from app.modules.c4i.scorecard import build_scorecard
 from app.modules.c4i.seasonal import compute_monthly_breakdown, compute_seasonal_risers
+from app.modules.c4i.models import SHIFTS
 from app.modules.c4i.simulation import (
     CITY_DISTRICTS,
     PLATE_CODES,
@@ -33,6 +35,7 @@ from app.modules.c4i.simulation import (
     _district_for,
     _random_patrol_route,
     _route_arrived,
+    current_shift,
 )
 from app.modules.crime.geolocation import derive_incident_type
 from app.modules.crime.population import IL_LABELS_TR, POPULATION_2025, per_100k
@@ -503,3 +506,62 @@ def test_compute_seasonal_risers_stable_category_not_flagged():
     kaza = next(r for r in risers if r["group"] == "kaza")
     assert kaza["is_summer_riser"] is False
     assert kaza["change_pct"] == 0.0
+
+
+# ---------------------------------------------------------------- personel / vardiya
+
+def test_current_shift_day_and_night_boundaries():
+    # TRT = UTC+3. 09:00 TRT (06:00 UTC) -> gunduz; 23:00 TRT (20:00 UTC) -> gece.
+    assert current_shift(datetime(2026, 7, 15, 6, 0)) == "gunduz"
+    assert current_shift(datetime(2026, 7, 15, 20, 0)) == "gece"
+    assert current_shift(datetime(2026, 7, 15, 4, 59)) == "gece"  # 07:59 TRT
+
+
+def test_shifts_are_exactly_two():
+    assert set(SHIFTS) == {"gunduz", "gece"}
+
+
+# ---------------------------------------------------------------- eskalasyon
+
+def test_compute_escalations_flags_long_unresolved_incident():
+    now = datetime(2026, 7, 15, 12, 0)
+    incidents = [
+        {"id": 1, "city": "amasya", "district": "Merzifon", "severity_score": 8.0,
+         "timestamp": now - timedelta(minutes=30), "required_units": 1, "assigned_unit_ids": []},
+    ]
+    rows = compute_escalations(incidents, now)
+    assert len(rows) == 1
+    assert "gecikmis_mudahale" in rows[0]["reasons"]
+
+
+def test_compute_escalations_flags_understaffed_multi_unit_incident():
+    now = datetime(2026, 7, 15, 12, 0)
+    incidents = [
+        {"id": 2, "city": "istanbul", "district": None, "severity_score": 9.5,
+         "timestamp": now - timedelta(minutes=15), "required_units": 2, "assigned_unit_ids": ["EKIP-34-01"]},
+    ]
+    rows = compute_escalations(incidents, now)
+    assert len(rows) == 1
+    assert "eksik_birim" in rows[0]["reasons"]
+    assert "gecikmis_mudahale" not in rows[0]["reasons"]  # henuz 20 dk gecmedi
+
+
+def test_compute_escalations_ignores_fresh_fully_staffed_incident():
+    now = datetime(2026, 7, 15, 12, 0)
+    incidents = [
+        {"id": 3, "city": "ankara", "district": None, "severity_score": 7.0,
+         "timestamp": now - timedelta(minutes=2), "required_units": 1, "assigned_unit_ids": ["EKIP-06-01"]},
+    ]
+    assert compute_escalations(incidents, now) == []
+
+
+def test_compute_escalations_sorted_by_score_descending():
+    now = datetime(2026, 7, 15, 12, 0)
+    incidents = [
+        {"id": 1, "city": "a", "district": None, "severity_score": 5.0,
+         "timestamp": now - timedelta(minutes=25), "required_units": 1, "assigned_unit_ids": []},
+        {"id": 2, "city": "b", "district": None, "severity_score": 9.0,
+         "timestamp": now - timedelta(minutes=25), "required_units": 1, "assigned_unit_ids": []},
+    ]
+    rows = compute_escalations(incidents, now)
+    assert rows[0]["id"] == 2  # daha yuksek siddet -> daha yuksek escalation_score

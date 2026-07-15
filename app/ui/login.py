@@ -53,9 +53,10 @@ LOGIN_HTML = f"""<!DOCTYPE html>
       <p class="err" id="err"></p>
     </form>
     <p class="hint">
-      Demo hesaplar: <code>admin</code> (tüm iller), <code>amasya_asayis</code>,
-      <code>istanbul_asayis</code> — şifreler <code>.env</code>'de <code>DEMO_*_PASSWORD</code>
-      ile özelleştirilebilir (varsayılan: <code>&lt;kullanıcı&gt;123</code>).
+      Demo hesaplar: <code>admin</code> (tüm iller), <code>amasya_asayis</code>/<code>istanbul_asayis</code>
+      (il düzeyi), <code>merzifon_amirlik</code> (ilçe düzeyi), <code>merkez</code> (tüm iller,
+      salt okunur) — şifreler <code>.env</code>'de <code>DEMO_*_PASSWORD</code> ile özelleştirilebilir
+      (varsayılan: <code>&lt;kullanıcı&gt;123</code>).
     </p>
   </div>
   <script>
