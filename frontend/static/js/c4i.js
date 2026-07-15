@@ -87,6 +87,33 @@
     }
   }
 
+  function initSidebarTabs() {
+    const tabBtns = document.querySelectorAll(".tab-btn[data-tab]");
+    if (!tabBtns.length) return;
+    tabBtns.forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        const name = btn.dataset.tab;
+        tabBtns.forEach(function (b) {
+          b.classList.toggle("active", b === btn);
+          b.setAttribute("aria-selected", b === btn ? "true" : "false");
+        });
+        document.querySelectorAll(".tab-panel[data-tab-panel]").forEach(function (panel) {
+          panel.hidden = panel.dataset.tabPanel !== name;
+        });
+      });
+    });
+  }
+
+  function updateOlaylarBadge() {
+    const badge = document.getElementById("tabBadgeOlaylar");
+    if (!badge) return;
+    const critical = parseInt(document.getElementById("criticalCount")?.textContent, 10) || 0;
+    const escalations = document.querySelectorAll("#escalationList .trend-row").length;
+    const total = critical + escalations;
+    badge.hidden = total === 0;
+    badge.textContent = String(total);
+  }
+
   function initMobileSidebar() {
     const toggle = document.getElementById("sidebarToggle");
     const backdrop = document.getElementById("sidebarBackdrop");
@@ -750,27 +777,29 @@
   }
 
   async function pollEscalations() {
+    const el = document.getElementById("escalationList");
     try {
       const data = await fetch("/api/v1/analytics/escalations", { headers: authHeader() }).then((r) => r.json());
-      const el = document.getElementById("escalationList");
-      if (!el) return;
       const items = (data.escalations || []).slice(0, 5);
       if (!items.length) {
-        el.innerHTML = '<span class="cat-empty">Eskalasyon gerektiren olay yok</span>';
-        return;
+        if (el) el.innerHTML = '<span class="cat-empty">Eskalasyon gerektiren olay yok</span>';
+      } else {
+        const REASON_TR = { gecikmis_mudahale: "Gecikmiş müdahale", eksik_birim: "Eksik birim" };
+        if (el) {
+          el.innerHTML = items
+            .map(function (e) {
+              return (
+                '<div class="trend-row trend-corridor"><span class="trend-city">#' +
+                e.id + " · " + (e.city || "—") + "</span>" +
+                '<span class="trend-nums">' + e.age_minutes + " dk · " + e.reasons.map((r) => REASON_TR[r] || r).join(", ") + "</span>" +
+                '<span class="trend-pct" style="color:var(--danger)">' + e.escalation_score + "</span></div>"
+              );
+            })
+            .join("");
+        }
       }
-      const REASON_TR = { gecikmis_mudahale: "Gecikmiş müdahale", eksik_birim: "Eksik birim" };
-      el.innerHTML = items
-        .map(function (e) {
-          return (
-            '<div class="trend-row trend-corridor"><span class="trend-city">#' +
-            e.id + " · " + (e.city || "—") + "</span>" +
-            '<span class="trend-nums">' + e.age_minutes + " dk · " + e.reasons.map((r) => REASON_TR[r] || r).join(", ") + "</span>" +
-            '<span class="trend-pct" style="color:var(--danger)">' + e.escalation_score + "</span></div>"
-          );
-        })
-        .join("");
     } catch (e) { /* sessiz */ }
+    updateOlaylarBadge();
   }
 
   // ---------------------------------------------------------- mevsimsel / gecmis suc istatistigi
@@ -822,6 +851,7 @@
         cnt.textContent = String(data.count || 0);
         cnt.classList.toggle("crit-alert", (data.count || 0) > 0);
       }
+      updateOlaylarBadge();
       const currentIds = (data.incidents || []).map(function (x) { return x.id; });
       const isNew = currentIds.some(function (id) { return !seenCriticalIds.has(id); });
       currentIds.forEach(function (id) { seenCriticalIds.add(id); });
@@ -879,6 +909,7 @@
   });
 
   initMobileSidebar();
+  initSidebarTabs();
   initRegionFilters().then(initAuthWidget);
   initIhbarForm();
   connectUnitsWS();

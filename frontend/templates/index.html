@@ -52,92 +52,36 @@
       </div>
     </div>
 
-    <div class="region-filter">
-      <span class="panel-label">Bölge / Birim Filtresi</span>
-      <div class="region-row">
-        <select id="filterCity"><option value="">Tüm İller</option></select>
-        <select id="filterDistrict"><option value="">Tüm İlçeler</option></select>
-      </div>
-      <div class="unit-type-chips" id="unitTypeChips"></div>
-      <div id="regionBreakdown" class="trend-list" style="margin-top:8px"></div>
+    <div class="sidebar-tabs" role="tablist">
+      <button type="button" class="tab-btn active" data-tab="harita" role="tab" aria-selected="true">Harita</button>
+      <button type="button" class="tab-btn" data-tab="olaylar" role="tab" aria-selected="false">Olaylar<span class="tab-badge" id="tabBadgeOlaylar" hidden></span></button>
+      <button type="button" class="tab-btn" data-tab="analitik" role="tab" aria-selected="false">Analitik</button>
     </div>
 
-    <details class="panel" open>
-      <summary>İlçe Listesi</summary>
-      <div class="panel-body">
+    <div class="tab-panel" data-tab-panel="harita">
+      <div class="region-filter">
+        <span class="panel-label">Bölge / Birim Filtresi</span>
+        <div class="region-row">
+          <select id="filterCity"><option value="">Tüm İller</option></select>
+          <select id="filterDistrict"><option value="">Tüm İlçeler</option></select>
+        </div>
+        <div class="unit-type-chips" id="unitTypeChips"></div>
+        <div id="regionBreakdown" class="trend-list" style="margin-top:8px"></div>
+      </div>
+
+      <div class="view-panel">
+        <span class="panel-label">İlçe Listesi</span>
         <div id="districtList" class="trend-list">Bir il seçin…</div>
       </div>
-    </details>
 
-    <div class="view-panel">
-      <span class="panel-label">Katmanlar</span>
-      <label class="filter-check"><input type="checkbox" id="layerPatrols" checked/> Canlı Devriyeler</label>
-      <label class="filter-check"><input type="checkbox" id="layerRisk" checked/> Yükselen Risk Bölgeleri</label>
-      <div id="patrolStats" class="patrol-stats">Devriye verisi bekleniyor…</div>
-    </div>
-
-    <details class="panel" open>
-      <summary>Kritik Olaylar — Son 1 Saat</summary>
-      <div class="panel-body">
-        <div id="criticalList" class="crit-list">Yükleniyor…</div>
+      <div class="view-panel">
+        <span class="panel-label">Katmanlar</span>
+        <label class="filter-check"><input type="checkbox" id="layerPatrols" checked/> Canlı Devriyeler</label>
+        <label class="filter-check"><input type="checkbox" id="layerRisk" checked/> Yükselen Risk Bölgeleri</label>
+        <div id="patrolStats" class="patrol-stats">Devriye verisi bekleniyor…</div>
       </div>
-    </details>
 
-    <details class="panel">
-      <summary>İhbar Gir</summary>
-      <div class="panel-body">
-        <form id="mapIhbarForm" class="ihbar-form">
-          <div class="region-row">
-            <input type="text" id="mapIhbarCategory" placeholder="Kategori (örn. hırsızlık)" required/>
-            <select id="mapIhbarType">
-              <option value="crime">Asayiş</option>
-              <option value="traffic_accident">Trafik</option>
-              <option value="fire_anomaly">Yangın</option>
-            </select>
-          </div>
-          <div class="region-row">
-            <input type="text" id="mapIhbarCity" placeholder="İl (örn. amasya)" required/>
-            <input type="text" id="mapIhbarDistrict" placeholder="İlçe (örn. Merzifon)"/>
-            <input type="number" id="mapIhbarSeverity" min="1" max="10" step="0.5" value="6" style="max-width:70px"/>
-          </div>
-          <button class="btn btn-primary" type="submit" style="width:100%">İhbarı Sisteme Düşür</button>
-        </form>
-        <p id="mapIhbarLog" class="hint-text" style="margin-top:8px"></p>
-      </div>
-    </details>
-
-    <div class="stat-box">
-      <div class="stat-row">
-        <span class="stat-num" id="eventCount">—</span>
-        <span class="stat-unit">görünür</span>
-      </div>
-      <div id="totalLine" class="stat-sub">Toplam: —</div>
-      <div id="catList" class="cat-list">Veriler yükleniyor…</div>
-    </div>
-
-    <details class="panel">
-      <summary>Analitik</summary>
-      <div class="panel-body">
-        <span class="panel-label">Risk Trendi (7g / önceki 7g)</span>
-        <div id="trendList" class="trend-list">Yükleniyor…</div>
-        <span class="panel-label" style="margin-top:10px">Erken Uyarı Skoru</span>
-        <div id="predictiveList" class="trend-list">Yükleniyor…</div>
-        <span class="panel-label" style="margin-top:10px">Yüksek Riskli Koridorlar</span>
-        <div id="corridorList" class="trend-list">Yükleniyor…</div>
-        <span class="panel-label" style="margin-top:10px">Müdahale Performansı (30g)</span>
-        <div id="performanceList" class="trend-list">Yükleniyor…</div>
-        <span class="panel-label" style="margin-top:10px">Kapsama Boşlukları</span>
-        <div id="coverageList" class="trend-list">Yükleniyor…</div>
-        <span class="panel-label" style="margin-top:10px">Eskalasyonlar</span>
-        <div id="escalationList" class="trend-list">Yükleniyor…</div>
-        <span class="panel-label" style="margin-top:10px">Yaz Ayları Suç Artışı (geçmiş veri)</span>
-        <div id="seasonalList" class="trend-list">Yükleniyor…</div>
-      </div>
-    </details>
-
-    <details class="panel">
-      <summary>Görünüm ve Filtreler</summary>
-      <div class="panel-body">
+      <div class="view-panel">
         <span class="panel-label">Görünüm</span>
         <div class="view-toggles">
           <button type="button" class="view-btn active" data-view-mode="cluster">Küme</button>
@@ -154,16 +98,72 @@
         <label class="filter-check"><input type="checkbox" id="typeFire" checked/> Yangın / Anomali</label>
         <button type="button" class="btn btn-fit" onclick="fitVisibleBounds()">Tümünü kadraja al</button>
       </div>
-    </details>
-
-    <div class="actions">
-      <button class="btn btn-primary" type="button" onclick="refreshMap(true)">Yenile</button>
-      <button class="btn" type="button" onclick="startScrape()">Veri tara</button>
     </div>
 
-    <button type="button" class="btn btn-report" onclick="generateRegionalReport()">
-      Bölgesel Rapor (PDF / Yazdır)
-    </button>
+    <div class="tab-panel" data-tab-panel="olaylar" hidden>
+      <span class="panel-label">Kritik Olaylar — Son 1 Saat</span>
+      <div id="criticalList" class="crit-list">Yükleniyor…</div>
+
+      <span class="panel-label" style="margin-top:14px">Eskalasyonlar</span>
+      <div id="escalationList" class="trend-list">Yükleniyor…</div>
+
+      <details class="panel" style="margin-top:14px">
+        <summary>İhbar Gir</summary>
+        <div class="panel-body">
+          <form id="mapIhbarForm" class="ihbar-form">
+            <div class="region-row">
+              <input type="text" id="mapIhbarCategory" placeholder="Kategori (örn. hırsızlık)" required/>
+              <select id="mapIhbarType">
+                <option value="crime">Asayiş</option>
+                <option value="traffic_accident">Trafik</option>
+                <option value="fire_anomaly">Yangın</option>
+              </select>
+            </div>
+            <div class="region-row">
+              <input type="text" id="mapIhbarCity" placeholder="İl (örn. amasya)" required/>
+              <input type="text" id="mapIhbarDistrict" placeholder="İlçe (örn. Merzifon)"/>
+              <input type="number" id="mapIhbarSeverity" min="1" max="10" step="0.5" value="6" style="max-width:70px"/>
+            </div>
+            <button class="btn btn-primary" type="submit" style="width:100%">İhbarı Sisteme Düşür</button>
+          </form>
+          <p id="mapIhbarLog" class="hint-text" style="margin-top:8px"></p>
+        </div>
+      </details>
+
+      <div class="stat-box" style="margin-top:14px">
+        <div class="stat-row">
+          <span class="stat-num" id="eventCount">—</span>
+          <span class="stat-unit">görünür</span>
+        </div>
+        <div id="totalLine" class="stat-sub">Toplam: —</div>
+        <div id="catList" class="cat-list">Veriler yükleniyor…</div>
+      </div>
+    </div>
+
+    <div class="tab-panel" data-tab-panel="analitik" hidden>
+      <span class="panel-label">Risk Trendi (7g / önceki 7g)</span>
+      <div id="trendList" class="trend-list">Yükleniyor…</div>
+      <span class="panel-label" style="margin-top:10px">Erken Uyarı Skoru</span>
+      <div id="predictiveList" class="trend-list">Yükleniyor…</div>
+      <span class="panel-label" style="margin-top:10px">Yüksek Riskli Koridorlar</span>
+      <div id="corridorList" class="trend-list">Yükleniyor…</div>
+      <span class="panel-label" style="margin-top:10px">Müdahale Performansı (30g)</span>
+      <div id="performanceList" class="trend-list">Yükleniyor…</div>
+      <span class="panel-label" style="margin-top:10px">Kapsama Boşlukları</span>
+      <div id="coverageList" class="trend-list">Yükleniyor…</div>
+      <span class="panel-label" style="margin-top:10px">Yaz Ayları Suç Artışı (geçmiş veri)</span>
+      <div id="seasonalList" class="trend-list">Yükleniyor…</div>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="actions">
+        <button class="btn btn-primary" type="button" onclick="refreshMap(true)">Yenile</button>
+        <button class="btn" type="button" onclick="startScrape()">Veri tara</button>
+      </div>
+      <button type="button" class="btn btn-report" onclick="generateRegionalReport()">
+        Bölgesel Rapor (PDF / Yazdır)
+      </button>
+    </div>
   </aside>
 
   <div class="legend">

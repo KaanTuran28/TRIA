@@ -69,12 +69,53 @@ h1, h2, h3, .panel-label, .label-display {
   z-index: 1000;
   width: min(380px, calc(100vw - 28px));
   max-height: calc(100vh - 100px);
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 16px 18px;
+  overflow: hidden; /* ic scroll .tab-panel'de — sekme baslik+ozet+alt aksiyon sabit kalir */
 }
+
+/* --------------------------------------------------- sekmeler (dispatch-konsolu paneli) */
+.sidebar-tabs {
+  display: flex;
+  gap: 2px;
+  margin: 14px 0 4px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.tab-btn {
+  position: relative;
+  flex: 1;
+  padding: 9px 4px 10px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  font-family: var(--font-display);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 15px; height: 15px; padding: 0 3px; margin-left: 4px;
+  border-radius: 8px; background: var(--danger); color: #fff;
+  font-family: var(--mono); font-size: 9.5px; font-weight: 700; vertical-align: 2px;
+}
+.tab-badge[hidden] { display: none; }
+.tab-panel {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-top: 12px;
+}
+.sidebar-footer { flex-shrink: 0; padding-top: 12px; }
 .sidebar-head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; justify-content: space-between; }
 .ops-status { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; font-size: 10.5px; color: var(--muted); white-space: nowrap; }
 .ops-clock { font-family: var(--mono); }
@@ -201,7 +242,9 @@ details.panel[open] > summary::after { content: '\2212'; }
 details.panel > summary:hover { color: var(--text); }
 details.panel > .panel-body { padding: 0 10px 10px; }
 
-.view-panel { margin-bottom: 12px; }
+.view-panel { margin-bottom: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+.tab-panel > .view-panel:first-child,
+.tab-panel > .region-filter + .view-panel { border-top: none; padding-top: 0; }
 .panel-label {
   display: block; font-size: 10.5px; color: var(--muted); margin-bottom: 8px;
 }

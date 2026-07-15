@@ -86,6 +86,24 @@ ADMIN_HTML = f"""<!DOCTYPE html>
     text-align: center; padding: 20px; color: var(--muted); font-size: 11.5px;
     border-top: 1px solid var(--border); margin-top: 24px;
   }}
+  .admin-tabs {{
+    display: flex; gap: 4px; margin: 18px 0 0; border-bottom: 1px solid var(--border);
+  }}
+  .admin-tab-btn {{
+    padding: 10px 18px; background: transparent; border: none; border-bottom: 2px solid transparent;
+    color: var(--muted); font-family: var(--font-display); font-size: 12.5px; font-weight: 500;
+    text-transform: uppercase; letter-spacing: 0.05em; cursor: pointer;
+  }}
+  .admin-tab-btn:hover {{ color: var(--text); }}
+  .admin-tab-btn.active {{ color: var(--accent); border-bottom-color: var(--accent); }}
+  .admin-tab-badge {{
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 16px; height: 16px; padding: 0 4px; margin-left: 5px;
+    border-radius: 8px; background: var(--danger); color: #fff;
+    font-family: var(--mono); font-size: 10px; font-weight: 700; vertical-align: 2px;
+  }}
+  .admin-tab-badge[hidden] {{ display: none; }}
+  .admin-tab-panel {{ padding-top: 16px; }}
   </style>
 </head>
 <body>
@@ -140,137 +158,140 @@ ADMIN_HTML = f"""<!DOCTYPE html>
         </section>
       </div>
 
-      <div class="grid" style="margin-top:14px">
-        <section class="card">
-          <h2>İşlemler</h2>
-          <div class="actions">
-            <button class="btn btn-primary" type="button" onclick="runScrape()">Haber taraması</button>
-            <button class="btn" type="button" onclick="runIbbIngest()">İBB trafik verisi çek</button>
-            <button class="btn" type="button" onclick="refreshAll()">Yenile</button>
-            <button class="btn btn-danger" type="button" onclick="clearData()">Tüm veriyi sil</button>
-          </div>
-          <p id="log" style="margin:12px 0 0;font-size:11.5px;color:var(--muted);min-height:1.2em"></p>
-        </section>
-
-        <section class="card">
-          <h2>Yeni İhbar Gir</h2>
-          <form class="ihbar-form" onsubmit="return submitIhbar(event)">
-            <div class="row">
-              <div style="flex:2">
-                <label>Kategori</label>
-                <input type="text" id="ihbarCategory" placeholder="örn. hırsızlık" required/>
-              </div>
-              <div style="flex:1">
-                <label>Olay Tipi</label>
-                <select id="ihbarType">
-                  <option value="crime">Asayiş</option>
-                  <option value="traffic_accident">Trafik</option>
-                  <option value="fire_anomaly">Yangın</option>
-                </select>
-              </div>
-            </div>
-            <div class="row">
-              <div style="flex:1">
-                <label>İl</label>
-                <input type="text" id="ihbarCity" placeholder="örn. amasya" required/>
-              </div>
-              <div style="flex:1">
-                <label>İlçe</label>
-                <input type="text" id="ihbarDistrict" placeholder="örn. Merzifon"/>
-              </div>
-              <div style="flex:1">
-                <label>Şiddet (1-10)</label>
-                <input type="number" id="ihbarSeverity" min="1" max="10" step="0.5" value="6"/>
-              </div>
-            </div>
-            <div>
-              <label>Açıklama</label>
-              <textarea id="ihbarDesc" placeholder="İhbar detayı…"></textarea>
-            </div>
-            <button class="btn btn-primary" type="submit" style="align-self:flex-start">İhbarı Sisteme Düşür</button>
-          </form>
-          <p id="ihbarLog" style="margin:10px 0 0;font-size:11.5px;color:var(--muted);min-height:1.2em"></p>
-        </section>
+      <div class="admin-tabs" role="tablist">
+        <button type="button" class="admin-tab-btn active" data-admin-tab="operasyon" role="tab" aria-selected="true">Operasyon</button>
+        <button type="button" class="admin-tab-btn" data-admin-tab="analitik" role="tab" aria-selected="false">Analitik &amp; Denetim<span class="admin-tab-badge" id="adminTabBadge" hidden></span></button>
+        <button type="button" class="admin-tab-btn" data-admin-tab="gelistirici" role="tab" aria-selected="false">Geliştirici</button>
       </div>
 
-      <section class="card" style="margin-top:14px">
-        <h2>Güvenlik Puan Kartı — İller Arası Karşılaştırma</h2>
-        <p class="desc" style="font-size:11.5px;color:var(--muted);margin:0 0 12px">
-          Mü­dahale süresi + kapsama boşluğu + son 7 gün trendinin ağırlıklı toplamı — bilimsel kesin
-          bir skor değil, iller arası hızlı karşılaştırma içindir.
-        </p>
-        <div id="scorecardTable" style="overflow-x:auto"></div>
-      </section>
+      <div class="admin-tab-panel" data-admin-tab-panel="operasyon">
+        <div class="grid">
+          <section class="card">
+            <h2>İşlemler</h2>
+            <div class="actions">
+              <button class="btn btn-primary" type="button" onclick="runScrape()">Haber taraması</button>
+              <button class="btn" type="button" onclick="runIbbIngest()">İBB trafik verisi çek</button>
+              <button class="btn" type="button" onclick="refreshAll()">Yenile</button>
+              <button class="btn btn-danger" type="button" onclick="clearData()">Tüm veriyi sil</button>
+            </div>
+            <p id="log" style="margin:12px 0 0;font-size:11.5px;color:var(--muted);min-height:1.2em"></p>
+          </section>
 
-      <details class="panel" style="margin-top:14px">
-        <summary>Eskalasyonlar</summary>
-        <div class="panel-body">
+          <section class="card">
+            <h2>Yeni İhbar Gir</h2>
+            <form class="ihbar-form" onsubmit="return submitIhbar(event)">
+              <div class="row">
+                <div style="flex:2">
+                  <label>Kategori</label>
+                  <input type="text" id="ihbarCategory" placeholder="örn. hırsızlık" required/>
+                </div>
+                <div style="flex:1">
+                  <label>Olay Tipi</label>
+                  <select id="ihbarType">
+                    <option value="crime">Asayiş</option>
+                    <option value="traffic_accident">Trafik</option>
+                    <option value="fire_anomaly">Yangın</option>
+                  </select>
+                </div>
+              </div>
+              <div class="row">
+                <div style="flex:1">
+                  <label>İl</label>
+                  <input type="text" id="ihbarCity" placeholder="örn. amasya" required/>
+                </div>
+                <div style="flex:1">
+                  <label>İlçe</label>
+                  <input type="text" id="ihbarDistrict" placeholder="örn. Merzifon"/>
+                </div>
+                <div style="flex:1">
+                  <label>Şiddet (1-10)</label>
+                  <input type="number" id="ihbarSeverity" min="1" max="10" step="0.5" value="6"/>
+                </div>
+              </div>
+              <div>
+                <label>Açıklama</label>
+                <textarea id="ihbarDesc" placeholder="İhbar detayı…"></textarea>
+              </div>
+              <button class="btn btn-primary" type="submit" style="align-self:flex-start">İhbarı Sisteme Düşür</button>
+            </form>
+            <p id="ihbarLog" style="margin:10px 0 0;font-size:11.5px;color:var(--muted);min-height:1.2em"></p>
+          </section>
+        </div>
+      </div>
+
+      <div class="admin-tab-panel" data-admin-tab-panel="analitik" hidden>
+        <section class="card">
+          <h2>Güvenlik Puan Kartı — İller Arası Karşılaştırma</h2>
+          <p class="desc" style="font-size:11.5px;color:var(--muted);margin:0 0 12px">
+            Mü­dahale süresi + kapsama boşluğu + son 7 gün trendinin ağırlıklı toplamı — bilimsel kesin
+            bir skor değil, iller arası hızlı karşılaştırma içindir.
+          </p>
+          <div id="scorecardTable" style="overflow-x:auto"></div>
+        </section>
+
+        <section class="card" style="margin-top:14px">
+          <h2>Eskalasyonlar</h2>
           <p class="desc" style="font-size:11.5px;color:var(--muted);margin:0 0 10px">
             Uzun süredir çözülmeyen veya eksik birim atanmış kritik olaylar — otomatik in-app uyarı.
           </p>
           <div id="escalationTable" style="overflow-x:auto"></div>
-        </div>
-      </details>
+        </section>
 
-      <details class="panel" style="margin-top:14px">
-        <summary>Denetim Kaydı (Audit Log)</summary>
-        <div class="panel-body">
+        <section class="card" style="margin-top:14px">
+          <h2>Denetim Kaydı (Audit Log)</h2>
           <p class="desc" style="font-size:11.5px;color:var(--muted);margin:0 0 10px">
             Kim, ne zaman, hangi yazma işlemini yaptı — yalnızca admin görür. Son 50 kayıt.
           </p>
           <div id="auditLogTable" style="overflow-x:auto"></div>
-        </div>
-      </details>
+        </section>
+      </div>
 
-      <details class="panel" style="margin-top:14px">
-        <summary>Geliştirici / API Testleri</summary>
-        <div class="panel-body">
-          <div class="grid api-grid">
-            <section class="card api-card">
-              <span class="badge badge-get">GET</span>
-              <h3>/health</h3>
-              <p class="desc">Servis ayakta mı</p>
-              <button class="btn" type="button" onclick="testApi('/health')">Test et</button>
-              <pre class="code" id="out-health">—</pre>
-            </section>
-            <section class="card api-card">
-              <span class="badge badge-get">GET</span>
-              <h3>/stats</h3>
-              <p class="desc">Olay sayısı ve kategoriler</p>
-              <button class="btn" type="button" onclick="testApi('/stats')">Test et</button>
-              <pre class="code" id="out-stats">—</pre>
-            </section>
-            <section class="card api-card">
-              <span class="badge badge-get">GET</span>
-              <h3>/geojson</h3>
-              <p class="desc">Harita katmanı verisi</p>
-              <button class="btn" type="button" onclick="testGeojson()">Test et</button>
-              <pre class="code" id="out-geojson">—</pre>
-            </section>
-            <section class="card api-card">
-              <span class="badge badge-get">GET</span>
-              <h3>/scraper/metrics</h3>
-              <p class="desc">Tarama pipeline metrikleri</p>
-              <button class="btn" type="button" onclick="loadMetrics()">Test et</button>
-              <pre class="code" id="out-metrics">—</pre>
-            </section>
-            <section class="card api-card">
-              <span class="badge badge-get">GET</span>
-              <h3>/pipeline/diagnostics</h3>
-              <p class="desc">Groq, RSS, Telegram yapılandırması</p>
-              <button class="btn" type="button" onclick="loadPipeline()">Test et</button>
-              <pre class="code" id="out-pipeline">—</pre>
-            </section>
-            <section class="card api-card">
-              <span class="badge badge-post">POST</span>
-              <h3>/test/groq</h3>
-              <p class="desc">LLM analiz pipeline testi</p>
-              <button class="btn btn-primary" type="button" onclick="testGroq()">Groq test</button>
-              <pre class="code" id="out-integration">—</pre>
-            </section>
-          </div>
+      <div class="admin-tab-panel" data-admin-tab-panel="gelistirici" hidden>
+        <div class="grid api-grid">
+          <section class="card api-card">
+            <span class="badge badge-get">GET</span>
+            <h3>/health</h3>
+            <p class="desc">Servis ayakta mı</p>
+            <button class="btn" type="button" onclick="testApi('/health')">Test et</button>
+            <pre class="code" id="out-health">—</pre>
+          </section>
+          <section class="card api-card">
+            <span class="badge badge-get">GET</span>
+            <h3>/stats</h3>
+            <p class="desc">Olay sayısı ve kategoriler</p>
+            <button class="btn" type="button" onclick="testApi('/stats')">Test et</button>
+            <pre class="code" id="out-stats">—</pre>
+          </section>
+          <section class="card api-card">
+            <span class="badge badge-get">GET</span>
+            <h3>/geojson</h3>
+            <p class="desc">Harita katmanı verisi</p>
+            <button class="btn" type="button" onclick="testGeojson()">Test et</button>
+            <pre class="code" id="out-geojson">—</pre>
+          </section>
+          <section class="card api-card">
+            <span class="badge badge-get">GET</span>
+            <h3>/scraper/metrics</h3>
+            <p class="desc">Tarama pipeline metrikleri</p>
+            <button class="btn" type="button" onclick="loadMetrics()">Test et</button>
+            <pre class="code" id="out-metrics">—</pre>
+          </section>
+          <section class="card api-card">
+            <span class="badge badge-get">GET</span>
+            <h3>/pipeline/diagnostics</h3>
+            <p class="desc">Groq, RSS, Telegram yapılandırması</p>
+            <button class="btn" type="button" onclick="loadPipeline()">Test et</button>
+            <pre class="code" id="out-pipeline">—</pre>
+          </section>
+          <section class="card api-card">
+            <span class="badge badge-post">POST</span>
+            <h3>/test/groq</h3>
+            <p class="desc">LLM analiz pipeline testi</p>
+            <button class="btn btn-primary" type="button" onclick="testGroq()">Groq test</button>
+            <pre class="code" id="out-integration">—</pre>
+          </section>
         </div>
-      </details>
+      </div>
 
       <footer>TRIA · Asayiş Komuta Merkezi · Operasyonel prototip</footer>
     </main>
@@ -335,6 +356,23 @@ ADMIN_HTML = f"""<!DOCTYPE html>
       }}
     }}
     renderAuthWidget();
+
+    function initAdminTabs() {{
+      const btns = document.querySelectorAll('.admin-tab-btn[data-admin-tab]');
+      btns.forEach(function (btn) {{
+        btn.addEventListener('click', function () {{
+          const name = btn.dataset.adminTab;
+          btns.forEach(function (b) {{
+            b.classList.toggle('active', b === btn);
+            b.setAttribute('aria-selected', b === btn ? 'true' : 'false');
+          }});
+          document.querySelectorAll('.admin-tab-panel[data-admin-tab-panel]').forEach(function (panel) {{
+            panel.hidden = panel.dataset.adminTabPanel !== name;
+          }});
+        }});
+      }});
+    }}
+    initAdminTabs();
 
     async function refreshAll() {{
       try {{
@@ -569,6 +607,13 @@ ADMIN_HTML = f"""<!DOCTYPE html>
       }}
     }}
 
+    function updateAdminTabBadge(count) {{
+      const badge = document.getElementById('adminTabBadge');
+      if (!badge) return;
+      badge.hidden = !count;
+      badge.textContent = String(count || 0);
+    }}
+
     async function loadEscalations() {{
       const el = document.getElementById('escalationTable');
       if (!el) return;
@@ -576,6 +621,7 @@ ADMIN_HTML = f"""<!DOCTYPE html>
         const r = await fetch('/api/v1/analytics/escalations', {{ headers: authHeader() }});
         const data = await r.json();
         const items = data.escalations || [];
+        updateAdminTabBadge(items.length);
         if (!items.length) {{
           el.innerHTML = '<span style="font-size:12px;color:var(--muted)">Eskalasyon gerektiren olay yok.</span>';
           return;

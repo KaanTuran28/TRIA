@@ -1,5 +1,30 @@
 # TRIA C4I — Gerçek Zamanlı Kolluk İstihbarat Ağı
 
+## v2.9.2 — Sekmeli Arayüz Reorganizasyonu (2026-07-16)
+
+Harita sidebar'ı ve admin paneli, özellik sayısı arttıkça (v2.6-v2.9) tek sütunda üst üste
+yığılan 10+ bölüme çıkmıştı. İkisi de sekmeli yapıya geçirildi — koyu renk paletine
+dokunulmadı (kullanıcı tercihi), yalnızca bilgi mimarisi değişti:
+
+- **Harita** (`frontend/templates/index.html`, `map.css`, `c4i.js`): sidebar artık
+  Harita / Olaylar / Analitik üç sekmesi — başlık+KPI+sekme çubuğu+alt aksiyon butonları
+  sabit kalır, yalnızca orta içerik alanı sekmeye göre değişir ve kendi içinde kaydırılır
+  (flex column + `.tab-panel { flex:1; overflow-y:auto }`). "Olaylar" sekmesinde kritik
+  olay+eskalasyon toplamını gösteren kırmızı rozet var. Tüm mevcut element ID'leri korundu,
+  `c4i.js`'in geri kalanı değişmedi.
+- **Admin paneli** (`app/ui/admin.py`): Operasyon / Analitik & Denetim / Geliştirici üç
+  sekmesi — eskiden art arda büyüyen `<details>` listesi (Puan Kartı, Eskalasyonlar, Audit
+  Log, API Testleri) artık mantıksal gruplarda. "Analitik & Denetim" sekmesinde eskalasyon
+  sayısı rozeti var.
+- **Bulunan gerçek CSS hatası:** `hidden` attribute'lu rozet elemanlarına `display:
+  inline-flex` unconditionally uygulanmıştı — tarayıcının `[hidden]{display:none}` varsayılan
+  kuralıyla AYNI özgüllükte (0,1,0) olduğu için sayfa `<style>` bloğundaki kural cascade'de
+  sonra geldiğinden kazanıyordu, rozet 0 olsa bile görünür kalıyordu. `.tab-badge[hidden]`/
+  `.admin-tab-badge[hidden] { display: none; }` ile düzeltildi. Playwright ile
+  `getComputedStyle(el).display` okunarak doğrulandı.
+- Playwright ile masaüstü+mobil, her sekme geçişi ayrı ayrı ekran görüntüsüyle doğrulandı,
+  konsol hatasız. 101 test değişmeden geçiyor (saf frontend/IA değişikliği).
+
 ## v2.9.1 — Harita/Mobil Kullanılabilirlik Düzeltmeleri (2026-07-16)
 
 Ekran görüntüsüyle denetlenince v2.8'in 81-il genişlemesinin fark edilmemiş üç yan etkisi
