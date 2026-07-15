@@ -1,5 +1,6 @@
 """Turkiye geolocation ve kategori normalizasyonu."""
 
+from app.modules.crime.district_lookup import list_districts, resolve_district
 from app.modules.crime.geolocation import (
     city_from_gdelt_place,
     extract_city_from_text,
@@ -7,6 +8,36 @@ from app.modules.crime.geolocation import (
     normalize_category,
     resolve_crime_coordinates,
 )
+
+
+def test_resolve_district_amasya_center():
+    # Amasya il merkezi koordinati (CITY_COORDS) bir Amasya ilcesine dusmeli.
+    district = resolve_district("amasya", 40.6499, 35.8353)
+    assert district is not None
+    assert "amasya" in district.lower() or district in (
+        "Merzifon", "Suluova", "Taşova", "Gümüşhacıköy", "Göynücek", "Hamamözü",
+    )
+
+
+def test_resolve_district_unknown_city_returns_none():
+    assert resolve_district("bilinmeyensehir", 40.0, 35.0) is None
+
+
+def test_resolve_district_missing_coords_returns_none():
+    assert resolve_district("amasya", None, None) is None
+
+
+def test_list_districts_normalizes_merkez_suffix():
+    # OSM "Amasya merkez" seklinde geliyor -> kanonik "Merkez"e normalize edilmeli.
+    districts = list_districts("amasya")
+    assert "Merkez" in districts
+    assert not any(d.lower().endswith("merkez") and d != "Merkez" for d in districts)
+    assert districts == sorted(districts, key=str.lower)
+
+
+def test_list_districts_unknown_city_returns_empty():
+    assert list_districts("bilinmeyensehir") == []
+    assert list_districts(None) == []
 
 
 def test_is_in_turkey():

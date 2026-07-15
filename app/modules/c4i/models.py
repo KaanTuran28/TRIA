@@ -10,15 +10,31 @@ from app.core.database import Base
 
 UNIT_STATUSES = ("patrolling", "responding", "offline")
 
+# Asayis birim tipleri (il/ilce asayis yonetiminin gercek devriye siniflandirmasi).
+# "patrol_car"/"motorcycle" eski degerler geriye donuk uyumluluk icin destekleniyor
+# (frontend ikon eslemesinde varsayilana duser).
+UNIT_TYPES = ("asayis", "trafik", "tem", "yunus", "cevik_kuvvet")
+
+UNIT_TYPE_LABELS_TR = {
+    "asayis": "Asayiş",
+    "trafik": "Trafik",
+    "tem": "TEM (Terörle Mücadele)",
+    "yunus": "Yunus Timi",
+    "cevik_kuvvet": "Çevik Kuvvet",
+    "patrol_car": "Asayiş",
+    "motorcycle": "Yunus Timi",
+}
+
 
 class PoliceUnit(Base):
     __tablename__ = "police_units"
 
     id = Column(Integer, primary_key=True, index=True)
     unit_id = Column(String, unique=True, index=True, nullable=False)  # ör. "EKIP-34-01"
-    unit_type = Column(String, nullable=False, default="patrol_car")  # patrol_car | motorcycle | swat
+    unit_type = Column(String, nullable=False, default="asayis")  # bkz. UNIT_TYPES
     status = Column(String, nullable=False, default="patrolling", index=True)
     city = Column(String, nullable=True, index=True)
+    district = Column(String, nullable=True, index=True)  # ilce (ör. "Merzifon")
     current_location = Column(Geometry(geometry_type="POINT", srid=4326), nullable=True)
     # {"waypoints": [[lon, lat], ...], "leg": 0, "t": 0.0} — devriye rotasi + ilerleme durumu
     assigned_route = Column(JSONB, nullable=True)

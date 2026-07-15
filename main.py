@@ -12,6 +12,9 @@ from sqlalchemy import text
 from app.modules.crime.spatial import router as spatial_router
 from app.core.database import AsyncSessionLocal, Base, engine
 from app.core.logging_config import configure_logging
+from app.modules.auth.models import User  # noqa: F401
+from app.modules.auth.router import router as auth_router
+from app.modules.auth.seed import seed_demo_users
 from app.modules.c4i.models import PoliceUnit  # noqa: F401
 from app.modules.c4i.router import router as c4i_router
 from app.modules.c4i.simulation import (
@@ -27,6 +30,7 @@ from app.modules.crime.scraper import run_news_scraper_bot
 from app.modules.crime.sources_config import get_official_api_config
 from app.scrapers.ibb_ingestor import run_ibb_ingest
 from app.ui.admin import router as admin_router
+from app.ui.login import router as login_router
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 FRONTEND_STATIC = PROJECT_ROOT / "frontend" / "static"
@@ -64,6 +68,8 @@ async def lifespan(app: FastAPI):
     # C4I: devriye birimlerini hazirla ve simulasyonu baslat
     async with AsyncSessionLocal() as db:
         await seed_police_units(db)
+    async with AsyncSessionLocal() as db:
+        await seed_demo_users(db)
     scheduler.add_job(simulation_tick, "interval", seconds=TICK_SECONDS, id="c4i_patrol_sim", max_instances=1)
     scheduler.add_job(
         snapshot_unit_history, "interval", seconds=HISTORY_SNAPSHOT_INTERVAL_S,
@@ -105,9 +111,11 @@ if FRONTEND_STATIC.is_dir():
     app.mount("/static", StaticFiles(directory=str(FRONTEND_STATIC)), name="static")
 
 app.include_router(admin_router)
+app.include_router(login_router)
 app.include_router(map_router)
 app.include_router(spatial_router)
 app.include_router(c4i_router)
+app.include_router(auth_router)
 
 
 @app.get("/health", tags=["Sistem"])

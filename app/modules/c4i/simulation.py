@@ -15,8 +15,10 @@ from sqlalchemy import func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import AsyncSessionLocal
-from app.modules.c4i.models import PoliceUnit, PoliceUnitHistory
+from app.modules.c4i.models import UNIT_TYPES, PoliceUnit, PoliceUnitHistory
+from app.modules.crime.district_lookup import list_districts
 from app.modules.crime.models import CrimeEvent
+from app.modules.crime.population import POPULATION_2025
 from app.modules.crime.services import CITY_COORDS
 
 logger = logging.getLogger("tria.c4i.simulation")
@@ -25,25 +27,45 @@ TICK_SECONDS = 3.0
 DEG_PER_KM = 1.0 / 111.0
 RESPONSE_SPEED_KMH_DEFAULT = 90.0
 
-# Sehir basina birim sayisi (buyuk iller daha yogun devriye alir)
+# Sehir basina birim sayisi (buyuk iller daha yogun devriye alir), TUIK 2025 nufusuna
+# orantili (~1 birim / 1.5M kisi), asgari 2 / azami 10 — tum 81 il en az bir devriye
+# gorur (v2.8 "ulusal kapsama" pivotu, bkz. CLAUDE.md). Tek bir "referans il" (eskiden
+# yalnizca amasya + 10 buyuksehir) yerine tum ulke uzerinde uretiliyor.
 SEED_PLAN = {
-    "istanbul": 6,
-    "ankara": 4,
-    "izmir": 3,
-    "bursa": 2,
-    "antalya": 2,
-    "adana": 2,
-    "gaziantep": 2,
-    "konya": 1,
-    "diyarbakir": 1,
-    "trabzon": 1,
+    city: min(10, max(2, round(pop / 1_500_000)))
+    for city, pop in POPULATION_2025.items()
 }
 
+# Resmi il trafik plaka kodlari (01-81) — EKIP-<plaka>-<sira> birim kimligi icin.
 PLATE_CODES = {
-    "istanbul": "34", "ankara": "06", "izmir": "35", "bursa": "16",
-    "antalya": "07", "adana": "01", "gaziantep": "27", "konya": "42",
-    "diyarbakir": "21", "trabzon": "61",
+    "adana": "01", "adiyaman": "02", "afyonkarahisar": "03", "agri": "04", "amasya": "05",
+    "ankara": "06", "antalya": "07", "artvin": "08", "aydin": "09", "balikesir": "10",
+    "bilecik": "11", "bingol": "12", "bitlis": "13", "bolu": "14", "burdur": "15",
+    "bursa": "16", "canakkale": "17", "cankiri": "18", "corum": "19", "denizli": "20",
+    "diyarbakir": "21", "edirne": "22", "elazig": "23", "erzincan": "24", "erzurum": "25",
+    "eskisehir": "26", "gaziantep": "27", "giresun": "28", "gumushane": "29", "hakkari": "30",
+    "hatay": "31", "isparta": "32", "mersin": "33", "istanbul": "34", "izmir": "35",
+    "kars": "36", "kastamonu": "37", "kayseri": "38", "kirklareli": "39", "kirsehir": "40",
+    "kocaeli": "41", "konya": "42", "kutahya": "43", "malatya": "44", "manisa": "45",
+    "kahramanmaras": "46", "mardin": "47", "mugla": "48", "mus": "49", "nevsehir": "50",
+    "nigde": "51", "ordu": "52", "rize": "53", "sakarya": "54", "samsun": "55",
+    "siirt": "56", "sinop": "57", "sivas": "58", "tekirdag": "59", "tokat": "60",
+    "trabzon": "61", "tunceli": "62", "sanliurfa": "63", "usak": "64", "van": "65",
+    "yozgat": "66", "zonguldak": "67", "aksaray": "68", "bayburt": "69", "karaman": "70",
+    "kirikkale": "71", "batman": "72", "sirnak": "73", "bartin": "74", "ardahan": "75",
+    "igdir": "76", "yalova": "77", "karabuk": "78", "kilis": "79", "osmaniye": "80",
+    "duzce": "81",
 }
+
+# Il basina ilce listesi — birimler bu ilceler arasinda dagitilir (round-robin).
+# turkey-ilce.geojson'dan (district_lookup) turetilir — 76/81 il bu kaynakta var;
+# geriye kalan 5 il (bkz. district_lookup) icin tek "<Il> Merkez" ilcesi varsayilir.
+CITY_DISTRICTS = {city: districts for city in POPULATION_2025 if (districts := list_districts(city))}
+
+
+def _district_for(city: str, i: int) -> str:
+    districts = CITY_DISTRICTS.get(city) or [f"{city.title()} Merkez"]
+    return districts[i % len(districts)]
 
 
 def _random_patrol_route(lat: float, lon: float, n_points: int = 6, radius_deg: float = 0.06) -> list[list[float]]:
@@ -77,9 +99,10 @@ async def seed_police_units(db: AsyncSession, force: bool = False) -> int:
             start = route[0]
             unit = PoliceUnit(
                 unit_id=f"EKIP-{plate}-{i + 1:02d}",
-                unit_type="patrol_car" if i % 3 != 2 else "motorcycle",
+                unit_type=UNIT_TYPES[i % len(UNIT_TYPES)],
                 status="patrolling",
                 city=city,
+                district=_district_for(city, i),
                 current_location=f"SRID=4326;POINT({start[0]} {start[1]})",
                 assigned_route={"waypoints": route, "leg": 0, "t": 0.0},
                 speed_kmh=random.choice([35.0, 40.0, 45.0]),
@@ -188,12 +211,30 @@ async def simulation_tick() -> None:
                         continue  # sahnede bekliyor, konum sabit
                     incident_id = route_dict.get("incident_id")
                     if incident_id:
-                        await db.execute(
-                            update(CrimeEvent)
-                            .where(CrimeEvent.id == incident_id, CrimeEvent.resolved_at.is_(None))
-                            .values(resolved_at=now)
+                        # assigned_unit_ids KUMULATIF'tir (dispatch.py'de asla eksiltilmez) — bir
+                        # olayin "hala baska aktif birimi var mi" sorusu, o an sahada/yolda olan
+                        # (status=responding, ayni incident_id'ye rota cizili) diger birimlere
+                        # bakilarak in-memory (bu tick'teki units listesi) hesaplanir. Boylece
+                        # bir birim gorevini bitirip devriyeye donunce ayni olaya "eksik birim"
+                        # sanilip yeniden sevk edilmez (cumulative sayim, aninlik degil).
+                        others_active = any(
+                            u.unit_id != unit.unit_id
+                            and u.status == "responding"
+                            and (dict(u.assigned_route) if u.assigned_route else {}).get("incident_id") == incident_id
+                            for u in units
                         )
-                        logger.info("C4I: %s olayi kapatti (#%s), devriyeye dondu", unit.unit_id, incident_id)
+                        if not others_active:
+                            await db.execute(
+                                update(CrimeEvent)
+                                .where(CrimeEvent.id == incident_id, CrimeEvent.resolved_at.is_(None))
+                                .values(resolved_at=now)
+                            )
+                            logger.info("C4I: %s olayi kapatti (#%s), devriyeye dondu", unit.unit_id, incident_id)
+                        else:
+                            logger.info(
+                                "C4I: %s olay #%s'daki gorevini tamamladi, baska birim hala sahnede",
+                                unit.unit_id, incident_id,
+                            )
                     unit.status = "patrolling"
                     unit.speed_kmh = 40.0
                     unit.assigned_route = {

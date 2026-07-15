@@ -2,7 +2,6 @@ import os
 
 import pytest
 
-from app.modules.crime.alerts import get_alert_diagnostics, maybe_alert_high_risk_event
 from app.modules.crime.services import crime_prefilter_score, parse_raw_news
 
 
@@ -19,12 +18,6 @@ def test_groq_or_fallback_parse(monkeypatch):
     )
     assert result is not None
     assert "severity_score" in result
-
-
-def test_telegram_alert_threshold(monkeypatch):
-    monkeypatch.setenv("TELEGRAM_GLOBAL_ALERTS_ENABLED", "0")
-    low = maybe_alert_high_risk_event({"category": "asayis", "severity_score": 5.0})
-    assert low["sent"] is False
 
 
 def test_pipeline_diagnostics_import():

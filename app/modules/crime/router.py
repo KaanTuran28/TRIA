@@ -6,12 +6,11 @@ from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.auth import require_admin
+from app.core.auth import get_optional_user, require_admin, scope_city_for
 from app.core.database import get_db
 from app.modules.crime.geojson_utils import rows_to_feature_collection
 from app.modules.crime.models import CrimeEvent, RawNewsArchive
 from app.modules.crime.schemas import CrimeStatsResponse
-from app.modules.crime.alerts import get_alert_diagnostics, maybe_alert_high_risk_event, send_telegram_message
 from app.modules.crime.services import parse_raw_news
 from app.modules.crime.scraper import (
     get_pipeline_diagnostics,
@@ -40,9 +39,18 @@ async def crime_map_page():
 async def crime_geojson(
     days: int = Query(default=90, ge=1, le=730, description="Son N gunun olaylari"),
     limit: int = Query(default=5000, ge=100, le=20000),
+    city: str | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
+    user: dict | None = Depends(get_optional_user),
 ):
+    """city_operator oturumu varsa yalnizca kendi iline ait olaylar dondurulur (zorunlu kisitlama)."""
+    scope_city = scope_city_for(user)
+    if scope_city:
+        city = scope_city
     since = datetime.utcnow() - timedelta(days=days)
+    conditions = [CrimeEvent.location.isnot(None), CrimeEvent.timestamp >= since]
+    if city:
+        conditions.append(func.lower(CrimeEvent.city) == city.strip().lower())
     rows = (
         await db.execute(
             select(
@@ -53,12 +61,14 @@ async def crime_geojson(
                 CrimeEvent.description,
                 CrimeEvent.source,
                 CrimeEvent.city,
+                CrimeEvent.district,
                 CrimeEvent.timestamp,
                 CrimeEvent.source_url,
+                CrimeEvent.resolved_at,
                 func.ST_X(CrimeEvent.location).label("lon"),
                 func.ST_Y(CrimeEvent.location).label("lat"),
             )
-            .where(CrimeEvent.location.isnot(None), CrimeEvent.timestamp >= since)
+            .where(*conditions)
             .order_by(CrimeEvent.timestamp.desc())
             .limit(limit)
         )
@@ -67,11 +77,16 @@ async def crime_geojson(
 
 
 @router.get("/stats", response_model=CrimeStatsResponse)
-async def crime_stats(db: AsyncSession = Depends(get_db)):
-    total = (await db.execute(select(func.count()).select_from(CrimeEvent))).scalar_one()
+async def crime_stats(db: AsyncSession = Depends(get_db), user: dict | None = Depends(get_optional_user)):
+    scope_city = scope_city_for(user)
+    base_filter = [func.lower(CrimeEvent.city) == scope_city] if scope_city else []
+    total = (
+        await db.execute(select(func.count()).select_from(CrimeEvent).where(*base_filter))
+    ).scalar_one()
     cat_rows = (
         await db.execute(
             select(CrimeEvent.category, func.count())
+            .where(*base_filter)
             .group_by(CrimeEvent.category)
             .order_by(func.count().desc())
         )
@@ -142,22 +157,6 @@ async def test_groq_pipeline():
     )
     parsed = parse_raw_news(title, body, "test_groq")
     return {"ok": parsed is not None, "parsed": parsed}
-
-
-@router.post("/test/telegram", dependencies=[Depends(require_admin)])
-async def test_telegram_alert():
-    ping = send_telegram_message("TRIA test mesaji — bot baglantisi OK.")
-    if not ping.get("ok"):
-        return {"ping": ping, "high_risk_alert": None}
-    sample = {
-        "category": "asayis",
-        "severity_score": 9.2,
-        "city": "ankara",
-        "description": "Test: yuksek riskli olay simulasyonu (makale/dogrulama).",
-        "source": "test",
-    }
-    alert = maybe_alert_high_risk_event(sample, source_url="https://tria.local/test")
-    return {"ping": ping, "high_risk_alert": alert, "config": get_alert_diagnostics()}
 
 
 @router.post("/normalize-data", dependencies=[Depends(require_admin)])

@@ -23,8 +23,10 @@ def row_to_feature(row: Any) -> dict[str, Any] | None:
             "description": row.description,
             "source": row.source,
             "city": row.city,
+            "district": getattr(row, "district", None),
             "timestamp": row.timestamp.isoformat() if row.timestamp else None,
             "source_url": getattr(row, "source_url", None),
+            "resolved": getattr(row, "resolved_at", None) is not None,
         },
     }
 

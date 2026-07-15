@@ -16,7 +16,6 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import AsyncSessionLocal
-from app.modules.crime.alerts import get_alert_diagnostics, maybe_alert_high_risk_event
 from app.modules.crime.dedupe import is_duplicate_title
 from app.modules.crime.geometry_utils import crime_point_wkt, utcnow_naive
 from app.modules.crime.models import RawNewsArchive
@@ -48,7 +47,6 @@ SCRAPER_METRICS: dict = {
     "telegram_posts_seen": 0,
     "gdelt_events_seen": 0,
     "gdelt_fast_track_created": 0,
-    "alerts_sent": 0,
     "last_run_at": None,
     "last_error": None,
 }
@@ -84,7 +82,6 @@ def get_pipeline_diagnostics() -> dict:
         "reddit_feeds": summary.get("reddit_feeds"),
         "gdelt_enabled": summary.get("gdelt_enabled"),
         "gdelt_url": summary.get("gdelt_url"),
-        "alerts": get_alert_diagnostics(),
     }
 
 
@@ -112,16 +109,22 @@ async def _insert_crime_event(db: AsyncSession, parsed: dict, source_url: str) -
     parsed = {**parsed, "category": cat, "city": geo["city"], "lat": geo["lat"], "lon": geo["lon"]}
     wkt = crime_point_wkt(parsed["lon"], parsed["lat"])
     extra = json.dumps({"source_url": source_url, "confidence": parsed.get("confidence")})
+    from app.modules.c4i.dispatch import compute_required_units
+    from app.modules.crime.district_lookup import resolve_district
+
+    district = resolve_district(parsed["city"], parsed["lat"], parsed["lon"])
+
     row = (
         await db.execute(
             text(
                 """
                 INSERT INTO crime_events
-                (category, incident_type, severity_score, description, source, city, location,
-                 timestamp, source_url, extra_data)
+                (category, incident_type, severity_score, description, source, city, district, location,
+                 timestamp, source_url, extra_data, required_units, assigned_unit_ids)
                 VALUES
-                (:category, :incident_type, :severity_score, :description, :source, :city,
-                 ST_GeomFromEWKT(:wkt), :timestamp, :source_url, CAST(:extra_data AS jsonb))
+                (:category, :incident_type, :severity_score, :description, :source, :city, :district,
+                 ST_GeomFromEWKT(:wkt), :timestamp, :source_url, CAST(:extra_data AS jsonb),
+                 :required_units, CAST(:assigned_unit_ids AS jsonb))
                 RETURNING id
                 """
             ),
@@ -132,10 +135,13 @@ async def _insert_crime_event(db: AsyncSession, parsed: dict, source_url: str) -
                 "description": parsed.get("description"),
                 "source": parsed.get("source", "osint"),
                 "city": parsed.get("city"),
+                "district": district,
                 "wkt": wkt,
                 "timestamp": utcnow_naive(),
                 "source_url": source_url,
                 "extra_data": extra,
+                "required_units": compute_required_units(float(parsed["severity_score"] or 0)),
+                "assigned_unit_ids": "[]",
             },
         )
     ).first()
@@ -248,9 +254,6 @@ async def _process_article(
         SCRAPER_METRICS["events_created"] += 1
         seen_urls.add(link)
         known_titles.append(title[:500])
-        alert = maybe_alert_high_risk_event(parsed, source_url=link)
-        if alert.get("sent"):
-            SCRAPER_METRICS["alerts_sent"] += 1
         await db.commit()
         await asyncio.sleep(float(os.getenv("LLM_COOLDOWN_SECONDS", "1") or "1"))
         return True
@@ -328,9 +331,6 @@ async def _run_gdelt_fast_track(
             SCRAPER_METRICS["events_created"] += 1
             seen_urls.add(link)
             known_titles.append(title[:500])
-            alert = maybe_alert_high_risk_event(parsed, source_url=link)
-            if alert.get("sent"):
-                SCRAPER_METRICS["alerts_sent"] += 1
             await db.commit()
 
 

@@ -99,6 +99,24 @@
 
 
 
+  function getAuth() {
+
+    try { return JSON.parse(localStorage.getItem("tria_auth") || "null"); } catch (e) { return null; }
+
+  }
+
+
+
+  function authHeader() {
+
+    const a = getAuth();
+
+    return a && a.token ? { Authorization: "Bearer " + a.token } : {};
+
+  }
+
+
+
   function toast(msg) {
 
     const el = document.getElementById("toast");
@@ -179,6 +197,22 @@
 
 
 
+  function regionPassesFilter(city, district) {
+
+    const cityFilter = document.getElementById("filterCity")?.value || "";
+
+    const districtFilter = document.getElementById("filterDistrict")?.value || "";
+
+    if (cityFilter && (city || "").toLowerCase() !== cityFilter.toLowerCase()) return false;
+
+    if (districtFilter && (district || "").toLowerCase() !== districtFilter.toLowerCase()) return false;
+
+    return true;
+
+  }
+
+
+
   function categoryLabel(cat) {
 
     const c = (cat || "").toLowerCase();
@@ -213,9 +247,11 @@
 
       url && String(url).startsWith("http")
 
-        ? '<br><a href="' + url + '" target="_blank" rel="noopener" style="color:#22d3ee">Kaynağı aç →</a>'
+        ? '<br><a href="' + url + '" target="_blank" rel="noopener" style="color:var(--accent)">Kaynağı aç →</a>'
 
         : "";
+
+    const region = (p.city || "—") + (p.district ? " / " + p.district : "");
 
     return (
 
@@ -227,9 +263,15 @@
 
       "</strong><br>" +
 
-      '<span class="popup-label">Şehir</span> · ' +
+      '<span class="popup-label">Durum</span> · ' +
 
-      (p.city || "—") +
+      (p.resolved ? "Çözüldü" : "Aktif") +
+
+      "<br>" +
+
+      '<span class="popup-label">İl / İlçe</span> · ' +
+
+      region +
 
       "<br>" +
 
@@ -263,7 +305,7 @@
 
 
 
-  function buildSeverityIcon(sev) {
+  function buildSeverityIcon(sev, resolved) {
 
     const s = severityInt(sev);
 
@@ -271,7 +313,9 @@
 
     const size = tier === "critical" ? 22 : tier === "medium" ? 16 : 11;
 
-    const pulse = tier === "critical" ? " severity-pulse" : "";
+    const pulse = !resolved && tier === "critical" ? " severity-pulse" : "";
+
+    const resolvedCls = resolved ? " severity-resolved" : "";
 
     return L.divIcon({
 
@@ -284,6 +328,8 @@
         tier +
 
         pulse +
+
+        resolvedCls +
 
         '" style="width:' +
 
@@ -315,7 +361,7 @@
 
     return L.marker([lat, lon], {
 
-      icon: buildSeverityIcon(p.severity_score),
+      icon: buildSeverityIcon(p.severity_score, p.resolved),
 
       severityScore: sev,
 
@@ -331,7 +377,11 @@
 
       const p = f.properties || {};
 
-      return severityPassesFilter(p.severity_score) && typePassesFilter(p.incident_type);
+      return (
+        severityPassesFilter(p.severity_score) &&
+        typePassesFilter(p.incident_type) &&
+        regionPassesFilter(p.city, p.district)
+      );
 
     });
 
@@ -583,9 +633,9 @@
 
       const [geo, stats] = await Promise.all([
 
-        fetch("/geojson").then((r) => r.json()),
+        fetch("/geojson", { headers: authHeader() }).then((r) => r.json()),
 
-        fetch("/stats").then((r) => r.json()),
+        fetch("/stats", { headers: authHeader() }).then((r) => r.json()),
 
       ]);
 
@@ -911,13 +961,17 @@
 
 
 
-  ["sevCritical", "sevMedium", "sevLow", "typeCrime", "typeTraffic", "typeFire"].forEach(function (id) {
+  ["sevCritical", "sevMedium", "sevLow", "typeCrime", "typeTraffic", "typeFire", "filterCity", "filterDistrict"].forEach(function (id) {
 
     const el = document.getElementById(id);
 
     if (el) el.addEventListener("change", applyFiltersAndRender);
 
   });
+
+
+
+  window.addEventListener("tria:regionFilterChanged", applyFiltersAndRender);
 
 
 

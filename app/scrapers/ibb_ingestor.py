@@ -18,6 +18,7 @@ from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.core.database import AsyncSessionLocal
+from app.modules.crime.district_lookup import resolve_district
 from app.modules.crime.geometry_utils import crime_point_wkt
 from app.modules.crime.models import RawNewsArchive
 from app.modules.crime.sources_config import get_official_api_config
@@ -157,10 +158,10 @@ async def run_ibb_ingest() -> dict[str, Any]:
                 text(
                     """
                     INSERT INTO crime_events
-                    (category, incident_type, severity_score, description, source, city,
+                    (category, incident_type, severity_score, description, source, city, district,
                      location, timestamp, source_url)
                     VALUES
-                    (:category, :incident_type, :severity_score, :description, :source, :city,
+                    (:category, :incident_type, :severity_score, :description, :source, :city, :district,
                      ST_GeomFromEWKT(:wkt), :timestamp, :source_url)
                     """
                 ),
@@ -171,6 +172,7 @@ async def run_ibb_ingest() -> dict[str, Any]:
                     "description": incident["description"],
                     "source": SOURCE_NAME,
                     "city": incident["city"],
+                    "district": resolve_district(incident["city"], incident["lat"], incident["lon"]),
                     "wkt": crime_point_wkt(incident["lon"], incident["lat"]),
                     "timestamp": incident["timestamp"],
                     "source_url": incident["source_url"],

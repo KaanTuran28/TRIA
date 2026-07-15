@@ -17,16 +17,24 @@ class CrimeEvent(Base, RiskEventMixin):
     description = Column(Text, nullable=True)
     source = Column(String)
     city = Column(String, nullable=True, index=True)
+    district = Column(String, nullable=True, index=True)  # ilce (ör. "Merzifon") — su an sadece manuel ihbar girisinde dolar
     location = Column(Geometry(geometry_type="POINT", srid=4326), nullable=True)
     source_url = Column(String, nullable=True, index=True)
     extra_data = Column(JSONB, nullable=True)
     # Dispatch is akisi: birim atandiginda assigned_unit_id + dispatched_at dolar,
     # olay yerine varildiginda arrived_at, mudahale tamamlaninca resolved_at dolar.
     # Bu uc zaman damgasi performans KPI'larinin (sevk gecikmesi/seyahat/sahne suresi) temelidir.
-    assigned_unit_id = Column(String, nullable=True, index=True)
+    assigned_unit_id = Column(String, nullable=True, index=True)  # ilk (birincil) atanan birim — geriye donuk uyumluluk
     dispatched_at = Column(DateTime, nullable=True)
-    arrived_at = Column(DateTime, nullable=True)
-    resolved_at = Column(DateTime, nullable=True)
+    arrived_at = Column(DateTime, nullable=True)  # ilk birimin varis zamani
+    resolved_at = Column(DateTime, nullable=True)  # TUM birimler isini bitirince dolar (coklu-birim sevk)
+    # Coklu-birim sevk (v2.6): cok yuksek siddetli olaylar (bkz. dispatch.py > compute_required_units)
+    # birden fazla birim gerektirir. assigned_unit_ids KUMULATIF'tir (bu olaya sevk edilmis TUM
+    # birimlerin listesi, asla eksiltilmez) — auto_dispatch "kac birim daha gerekli" hesabini bu
+    # listenin uzunluguna gore yapar. Cozum (resolved_at), o an fiilen sahada/yolda baska birim
+    # kalmadiginda dolar (bkz. simulation.py > simulation_tick, in-memory "others_active" kontrolu).
+    required_units = Column(Integer, nullable=False, default=1, server_default="1")
+    assigned_unit_ids = Column(JSONB, nullable=True)
 
     __table_args__ = (
         Index("ix_crime_events_timestamp", "timestamp"),

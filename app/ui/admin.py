@@ -15,105 +15,93 @@ ADMIN_HTML = f"""<!DOCTYPE html>
   <style>
   {THEME_VARS}
   {THEME_BASE_CSS}
-  .shell {{ position: relative; z-index: 1; min-height: 100vh; }}
+  .shell {{ min-height: 100vh; }}
   .topbar {{
     display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;
-    padding: 28px 32px; border-bottom: 1px solid var(--border);
-    background: linear-gradient(180deg, rgba(15,23,42,0.95), rgba(15,23,42,0.6));
-    backdrop-filter: blur(12px);
+    padding: 20px 28px; border-bottom: 1px solid var(--border);
+    background: var(--surface);
   }}
-  .brand {{ display: flex; align-items: center; gap: 16px; }}
+  .brand {{ display: flex; align-items: center; gap: 14px; }}
   .logo {{
-    width: 48px; height: 48px; border-radius: 14px;
-    background: linear-gradient(135deg, #22d3ee, #e11d48);
+    width: 40px; height: 40px; border-radius: var(--radius-sm);
+    background: var(--accent); color: #16120a;
     display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 18px; color: #fff; box-shadow: 0 8px 24px rgba(34,211,238,0.3);
+    font-family: var(--font-display); font-weight: 700; font-size: 17px;
   }}
-  .topbar h1 {{ margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.02em; }}
-  .topbar p {{ margin: 4px 0 0; color: var(--muted); font-size: 14px; max-width: 520px; }}
+  .topbar h1 {{ margin: 0; font-size: 18px; font-weight: 600; letter-spacing: 0.02em; }}
+  .topbar p {{ margin: 4px 0 0; color: var(--muted); font-size: 12.5px; max-width: 520px; text-transform: none; letter-spacing: normal; font-family: var(--font); }}
   .status-pill {{
-    display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px;
-    border-radius: 999px; background: rgba(52, 211, 153, 0.1); border: 1px solid rgba(52, 211, 153, 0.25);
-    font-size: 13px; color: var(--success);
+    display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px;
+    border-radius: var(--radius-sm); background: var(--success-dim); border: 1px solid var(--success);
+    font-size: 12px; color: var(--success); font-family: var(--mono);
   }}
-  .status-pill::before {{
-    content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--success);
-    box-shadow: 0 0 12px var(--success); animation: pulse 2s infinite;
-  }}
-  @keyframes pulse {{ 0%,100%{{ opacity:1 }} 50%{{ opacity:0.5 }} }}
-  main {{ max-width: 1180px; margin: 0 auto; padding: 28px 24px 48px; }}
-  .grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }}
+  main {{ max-width: 1180px; margin: 0 auto; padding: 24px 24px 48px; }}
+  .grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }}
   .card {{
-    background: var(--surface); backdrop-filter: blur(16px);
+    background: var(--surface);
     border: 1px solid var(--border); border-radius: var(--radius);
-    padding: 22px; box-shadow: var(--shadow);
-    transition: border-color 0.2s, transform 0.2s;
-  }}
-  .card:hover {{ border-color: var(--border-glow); }}
-  .card-highlight {{
-    background: linear-gradient(145deg, rgba(34,211,238,0.08), rgba(17,24,39,0.9));
-    border-color: rgba(34, 211, 238, 0.2);
+    padding: 18px;
   }}
   .card h2 {{
-    margin: 0 0 16px; font-size: 13px; font-weight: 600; text-transform: uppercase;
+    margin: 0 0 14px; font-size: 12px; font-weight: 600;
     letter-spacing: 0.08em; color: var(--muted);
   }}
-  .stat-big {{
-    font-size: 48px; font-weight: 700; line-height: 1;
-    background: linear-gradient(135deg, #f8fafc, #22d3ee);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }}
-  .stat-label {{ font-size: 13px; color: var(--muted); margin-top: 6px; }}
-  .chips {{ display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }}
+  .stat-big {{ font-size: 40px; font-weight: 700; font-family: var(--font-display); color: var(--text); line-height: 1; }}
+  .stat-label {{ font-size: 12px; color: var(--muted); margin-top: 6px; text-transform: none; letter-spacing: normal; font-family: var(--font); }}
+  .chips {{ display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }}
   .chip {{
-    padding: 6px 12px; border-radius: 999px; font-size: 12px;
-    background: var(--accent-dim); border: 1px solid rgba(34,211,238,0.2); color: #a5f3fc;
+    padding: 4px 10px; border-radius: var(--radius-sm); font-size: 11.5px;
+    background: var(--bg-soft); border: 1px solid var(--border); color: var(--text); font-family: var(--mono);
   }}
-  .nav-grid {{ display: grid; grid-template-columns: 1fr; gap: 10px; }}
+  .nav-grid {{ display: grid; grid-template-columns: 1fr; gap: 8px; }}
   .nav-item {{
-    display: flex; align-items: center; gap: 14px; padding: 14px 16px;
+    display: flex; align-items: center; gap: 12px; padding: 10px 12px;
     border-radius: var(--radius-sm); border: 1px solid var(--border);
-    background: rgba(15, 23, 42, 0.5); text-decoration: none; color: var(--text);
-    transition: all 0.2s;
+    background: var(--bg-soft); text-decoration: none; color: var(--text);
   }}
-  .nav-item:hover {{
-    border-color: var(--border-glow); background: rgba(34, 211, 238, 0.08);
-    transform: translateX(4px);
-  }}
-  .nav-item .icon {{
-    width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
-    font-size: 18px; flex-shrink: 0;
-  }}
-  .nav-item.map .icon {{ background: rgba(225, 29, 72, 0.15); }}
-  .nav-item.api .icon {{ background: rgba(52, 211, 153, 0.15); }}
-  .nav-item.json .icon {{ background: rgba(251, 191, 36, 0.15); }}
-  .nav-item strong {{ display: block; font-size: 14px; }}
-  .nav-item span {{ font-size: 12px; color: var(--muted); }}
-  .actions {{ display: flex; flex-wrap: wrap; gap: 10px; }}
-  .api-grid {{ margin-top: 24px; }}
+  .nav-item:hover {{ border-color: var(--accent); }}
+  .nav-item .lamp {{ width: 8px; height: 8px; }}
+  .nav-item strong {{ display: block; font-size: 13px; font-weight: 600; }}
+  .nav-item span {{ font-size: 11.5px; color: var(--muted); }}
+  .actions {{ display: flex; flex-wrap: wrap; gap: 8px; }}
   .api-card h3 {{
-    margin: 0 0 4px; font-size: 14px; font-weight: 600; font-family: var(--mono); color: #e2e8f0;
+    margin: 0 0 4px; font-size: 13px; font-weight: 600; font-family: var(--mono); color: var(--text);
   }}
-  .api-card .desc {{ font-size: 12px; color: var(--muted); margin-bottom: 12px; }}
+  .api-card .desc {{ font-size: 11.5px; color: var(--muted); margin-bottom: 10px; }}
+  form.ihbar-form {{ display: flex; flex-direction: column; gap: 8px; }}
+  form.ihbar-form .row {{ display: flex; gap: 8px; }}
+  form.ihbar-form label {{ font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 3px; }}
+  form.ihbar-form input, form.ihbar-form select, form.ihbar-form textarea {{
+    width: 100%; background: var(--bg-soft); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); color: var(--text); padding: 7px 9px; font-size: 13px;
+    font-family: var(--font);
+  }}
+  form.ihbar-form textarea {{ resize: vertical; min-height: 54px; }}
+  table.scorecard {{ width: 100%; border-collapse: collapse; font-size: 12.5px; }}
+  table.scorecard th, table.scorecard td {{ text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }}
+  table.scorecard th {{ color: var(--muted); font-weight: 600; text-transform: uppercase; font-size: 10.5px; letter-spacing: 0.04em; }}
+  table.scorecard td.num {{ font-family: var(--mono); }}
+  table.scorecard tr:hover td {{ background: var(--bg-soft); }}
   footer {{
-    text-align: center; padding: 24px; color: var(--muted); font-size: 12px;
-    border-top: 1px solid var(--border); margin-top: 32px;
+    text-align: center; padding: 20px; color: var(--muted); font-size: 11.5px;
+    border-top: 1px solid var(--border); margin-top: 24px;
   }}
   </style>
 </head>
 <body>
-  
   <div class="shell">
     <header class="topbar">
       <div class="brand">
         <div class="logo">T</div>
         <div>
           <h1>TRIA C4I — Yönetim Paneli</h1>
-          <p>Asayiş komuta merkezi — OSINT füzyon, canlı devriye sevk ve CBS haritalama</p>
+          <p>Asayiş komuta merkezi — OSINT füzyon, canlı devriye sevk, ihbar girişi</p>
         </div>
       </div>
-      <div class="status-pill" id="systemStatus">Sistem kontrol ediliyor…</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="status-pill" id="systemStatus">sistem kontrol ediliyor…</div>
+        <div id="authWidget"></div>
+      </div>
     </header>
 
     <main>
@@ -121,94 +109,149 @@ ADMIN_HTML = f"""<!DOCTYPE html>
         <section class="card">
           <h2>Bileşenler</h2>
           <nav class="nav-grid">
-            <a class="nav-item map" href="/map">
-              <div class="icon">🗺</div>
-              <div><strong>CBS Haritası</strong><span>Canlı olay noktaları — Türkiye</span></div>
+            <a class="nav-item" href="/map">
+              <span class="lamp lamp-ok"></span>
+              <div><strong>CBS Haritası</strong><span>Canlı olay + devriye görünümü</span></div>
             </a>
-            <a class="nav-item api" href="/api/docs" target="_blank">
-              <div class="icon">⚙</div>
+            <a class="nav-item" href="/api/docs" target="_blank">
+              <span class="lamp"></span>
               <div><strong>Swagger API</strong><span>Endpoint dokümantasyonu</span></div>
             </a>
-            <a class="nav-item json" href="/openapi.json" target="_blank">
-              <div class="icon">{{}}</div>
-              <div><strong>OpenAPI JSON</strong><span>Makale teknik eki</span></div>
+            <a class="nav-item" href="/openapi.json" target="_blank">
+              <span class="lamp"></span>
+              <div><strong>OpenAPI JSON</strong><span>Teknik şema</span></div>
             </a>
           </nav>
         </section>
 
-        <section class="card card-highlight">
-          <h2>Veri özeti</h2>
+        <section class="card">
+          <h2>Veri Özeti</h2>
           <div class="stat-big" id="totalEvents">—</div>
           <div class="stat-label">haritada görünen olay</div>
           <div class="chips" id="categories"></div>
         </section>
 
         <section class="card">
-          <h2>İşlemler</h2>
-          <div class="actions">
-            <button class="btn btn-primary" type="button" onclick="runScrape()">▶ Haber taraması</button>
-            <button class="btn" type="button" onclick="runIbbIngest()">🚗 İBB trafik verisi çek</button>
-            <button class="btn" type="button" onclick="refreshAll()">↻ Yenile</button>
-            <button class="btn btn-danger" type="button" onclick="clearData()">✕ Tüm veriyi sil</button>
-          </div>
-          <p id="log" style="margin:14px 0 0;font-size:12px;color:var(--muted);min-height:1.2em"></p>
-        </section>
-
-        <section class="card card-highlight">
-          <h2>C4I Sevk Kuyruğu</h2>
+          <h2>Sevk Kuyruğu</h2>
           <div class="stat-big" id="dispatchPending">—</div>
           <div class="stat-label">bekleyen kritik olay</div>
-          <div id="dispatchQueueList" style="margin-top:12px;display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto"></div>
+          <div id="dispatchQueueList" style="margin-top:10px;display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto"></div>
         </section>
       </div>
 
-      <div class="grid api-grid">
-        <section class="card api-card">
-          <span class="badge badge-get">GET</span>
-          <h3>/health</h3>
-          <p class="desc">Servis ayakta mı</p>
-          <button class="btn" type="button" onclick="testApi('/health')">Test et</button>
-          <pre class="code" id="out-health">—</pre>
+      <div class="grid" style="margin-top:14px">
+        <section class="card">
+          <h2>İşlemler</h2>
+          <div class="actions">
+            <button class="btn btn-primary" type="button" onclick="runScrape()">Haber taraması</button>
+            <button class="btn" type="button" onclick="runIbbIngest()">İBB trafik verisi çek</button>
+            <button class="btn" type="button" onclick="refreshAll()">Yenile</button>
+            <button class="btn btn-danger" type="button" onclick="clearData()">Tüm veriyi sil</button>
+          </div>
+          <p id="log" style="margin:12px 0 0;font-size:11.5px;color:var(--muted);min-height:1.2em"></p>
         </section>
-        <section class="card api-card">
-          <span class="badge badge-get">GET</span>
-          <h3>/stats</h3>
-          <p class="desc">Olay sayısı ve kategoriler</p>
-          <button class="btn" type="button" onclick="testApi('/stats')">Test et</button>
-          <pre class="code" id="out-stats">—</pre>
-        </section>
-        <section class="card api-card">
-          <span class="badge badge-get">GET</span>
-          <h3>/geojson</h3>
-          <p class="desc">Harita katmanı verisi</p>
-          <button class="btn" type="button" onclick="testGeojson()">Test et</button>
-          <pre class="code" id="out-geojson">—</pre>
-        </section>
-        <section class="card api-card">
-          <span class="badge badge-get">GET</span>
-          <h3>/scraper/metrics</h3>
-          <p class="desc">Tarama pipeline metrikleri</p>
-          <button class="btn" type="button" onclick="loadMetrics()">Test et</button>
-          <pre class="code" id="out-metrics">—</pre>
-        </section>
-        <section class="card api-card">
-          <span class="badge badge-get">GET</span>
-          <h3>/pipeline/diagnostics</h3>
-          <p class="desc">Groq, RSS, Telegram yapılandırması</p>
-          <button class="btn" type="button" onclick="loadPipeline()">Test et</button>
-          <pre class="code" id="out-pipeline">—</pre>
-        </section>
-        <section class="card api-card">
-          <span class="badge badge-post">POST</span>
-          <h3>/test/groq · /test/telegram</h3>
-          <p class="desc">LLM analizi ve yüksek risk uyarısı</p>
-          <button class="btn btn-primary" type="button" onclick="testGroq()">Groq test</button>
-          <button class="btn" type="button" onclick="testTelegram()">Telegram test</button>
-          <pre class="code" id="out-integration">—</pre>
+
+        <section class="card">
+          <h2>Yeni İhbar Gir</h2>
+          <form class="ihbar-form" onsubmit="return submitIhbar(event)">
+            <div class="row">
+              <div style="flex:2">
+                <label>Kategori</label>
+                <input type="text" id="ihbarCategory" placeholder="örn. hırsızlık" required/>
+              </div>
+              <div style="flex:1">
+                <label>Olay Tipi</label>
+                <select id="ihbarType">
+                  <option value="crime">Asayiş</option>
+                  <option value="traffic_accident">Trafik</option>
+                  <option value="fire_anomaly">Yangın</option>
+                </select>
+              </div>
+            </div>
+            <div class="row">
+              <div style="flex:1">
+                <label>İl</label>
+                <input type="text" id="ihbarCity" placeholder="örn. amasya" required/>
+              </div>
+              <div style="flex:1">
+                <label>İlçe</label>
+                <input type="text" id="ihbarDistrict" placeholder="örn. Merzifon"/>
+              </div>
+              <div style="flex:1">
+                <label>Şiddet (1-10)</label>
+                <input type="number" id="ihbarSeverity" min="1" max="10" step="0.5" value="6"/>
+              </div>
+            </div>
+            <div>
+              <label>Açıklama</label>
+              <textarea id="ihbarDesc" placeholder="İhbar detayı…"></textarea>
+            </div>
+            <button class="btn btn-primary" type="submit" style="align-self:flex-start">İhbarı Sisteme Düşür</button>
+          </form>
+          <p id="ihbarLog" style="margin:10px 0 0;font-size:11.5px;color:var(--muted);min-height:1.2em"></p>
         </section>
       </div>
 
-      <footer>TRIA · Coğrafi Bilgi Sistemi · Araştırma prototipi</footer>
+      <section class="card" style="margin-top:14px">
+        <h2>Güvenlik Puan Kartı — İller Arası Karşılaştırma</h2>
+        <p class="desc" style="font-size:11.5px;color:var(--muted);margin:0 0 12px">
+          Mü­dahale süresi + kapsama boşluğu + son 7 gün trendinin ağırlıklı toplamı — bilimsel kesin
+          bir skor değil, iller arası hızlı karşılaştırma içindir.
+        </p>
+        <div id="scorecardTable" style="overflow-x:auto"></div>
+      </section>
+
+      <details class="panel" style="margin-top:14px">
+        <summary>Geliştirici / API Testleri</summary>
+        <div class="panel-body">
+          <div class="grid api-grid">
+            <section class="card api-card">
+              <span class="badge badge-get">GET</span>
+              <h3>/health</h3>
+              <p class="desc">Servis ayakta mı</p>
+              <button class="btn" type="button" onclick="testApi('/health')">Test et</button>
+              <pre class="code" id="out-health">—</pre>
+            </section>
+            <section class="card api-card">
+              <span class="badge badge-get">GET</span>
+              <h3>/stats</h3>
+              <p class="desc">Olay sayısı ve kategoriler</p>
+              <button class="btn" type="button" onclick="testApi('/stats')">Test et</button>
+              <pre class="code" id="out-stats">—</pre>
+            </section>
+            <section class="card api-card">
+              <span class="badge badge-get">GET</span>
+              <h3>/geojson</h3>
+              <p class="desc">Harita katmanı verisi</p>
+              <button class="btn" type="button" onclick="testGeojson()">Test et</button>
+              <pre class="code" id="out-geojson">—</pre>
+            </section>
+            <section class="card api-card">
+              <span class="badge badge-get">GET</span>
+              <h3>/scraper/metrics</h3>
+              <p class="desc">Tarama pipeline metrikleri</p>
+              <button class="btn" type="button" onclick="loadMetrics()">Test et</button>
+              <pre class="code" id="out-metrics">—</pre>
+            </section>
+            <section class="card api-card">
+              <span class="badge badge-get">GET</span>
+              <h3>/pipeline/diagnostics</h3>
+              <p class="desc">Groq, RSS, Telegram yapılandırması</p>
+              <button class="btn" type="button" onclick="loadPipeline()">Test et</button>
+              <pre class="code" id="out-pipeline">—</pre>
+            </section>
+            <section class="card api-card">
+              <span class="badge badge-post">POST</span>
+              <h3>/test/groq</h3>
+              <p class="desc">LLM analiz pipeline testi</p>
+              <button class="btn btn-primary" type="button" onclick="testGroq()">Groq test</button>
+              <pre class="code" id="out-integration">—</pre>
+            </section>
+          </div>
+        </div>
+      </details>
+
+      <footer>TRIA · Asayiş Komuta Merkezi · Operasyonel prototip</footer>
     </main>
   </div>
   <div class="toast" id="toast"></div>
@@ -229,18 +272,49 @@ ADMIN_HTML = f"""<!DOCTYPE html>
     }}
     function setLog(msg) {{ document.getElementById('log').textContent = msg; }}
 
+    function getAuth() {{
+      try {{ return JSON.parse(localStorage.getItem('tria_auth') || 'null'); }} catch (e) {{ return null; }}
+    }}
+    function authHeader() {{
+      const a = getAuth();
+      return a && a.token ? {{ 'Authorization': 'Bearer ' + a.token }} : {{}};
+    }}
+    function logout() {{
+      localStorage.removeItem('tria_auth');
+      window.location.href = '/login';
+    }}
+    function renderAuthWidget() {{
+      const el = document.getElementById('authWidget');
+      if (!el) return;
+      const a = getAuth();
+      if (!a) {{
+        el.innerHTML = '<a class="btn btn-primary" href="/login">Giriş Yap</a>';
+        return;
+      }}
+      const scope = a.city ? a.city.charAt(0).toLocaleUpperCase('tr') + a.city.slice(1) : 'Tüm İller';
+      el.innerHTML =
+        '<span style="font-size:12px;color:var(--muted)">' + (a.display_name || a.username) +
+        ' · <b style="color:var(--text)">' + scope + '</b></span> ' +
+        '<button class="btn" style="padding:5px 10px;font-size:11.5px" onclick="logout()">Çıkış</button>';
+      if (a.role === 'city_operator' && a.city) {{
+        const cityInput = document.getElementById('ihbarCity');
+        if (cityInput) {{ cityInput.value = a.city; cityInput.disabled = true; }}
+      }}
+    }}
+    renderAuthWidget();
+
     async function refreshAll() {{
       try {{
         const [health, stats] = await Promise.all([
           fetch('/health').then(r => r.json()),
-          fetch('/stats').then(r => r.json())
+          fetch('/stats', {{ headers: authHeader() }}).then(r => r.json())
         ]);
-        document.getElementById('systemStatus').textContent = 'Sistem çevrimiçi';
+        document.getElementById('systemStatus').textContent = 'sistem çevrimiçi';
         document.getElementById('totalEvents').textContent = stats.total_events ?? 0;
         const chipEl = document.getElementById('categories');
         const entries = Object.entries(stats.categories || {{}});
         if (!entries.length) {{
-          chipEl.innerHTML = '<span class="chip">Henüz veri yok — tarama başlatın</span>';
+          chipEl.innerHTML = '<span class="chip">veri yok — tarama başlatın</span>';
         }} else {{
           chipEl.innerHTML = entries.slice(0, 8).map(([k,v]) =>
             `<span class="chip">${{k}} · ${{v}}</span>`).join('');
@@ -249,7 +323,7 @@ ADMIN_HTML = f"""<!DOCTYPE html>
         document.getElementById('out-stats').textContent = JSON.stringify(stats, null, 2);
         setLog('Son güncelleme: ' + new Date().toLocaleTimeString('tr-TR'));
       }} catch (e) {{
-        document.getElementById('systemStatus').textContent = 'Bağlantı hatası';
+        document.getElementById('systemStatus').textContent = 'bağlantı hatası';
         setLog('Hata: ' + e.message);
       }}
     }}
@@ -257,7 +331,7 @@ ADMIN_HTML = f"""<!DOCTYPE html>
     async function testApi(path) {{
       const el = document.getElementById(path === '/health' ? 'out-health' : 'out-stats');
       try {{
-        const data = await fetch(path).then(r => r.json());
+        const data = await fetch(path, {{ headers: authHeader() }}).then(r => r.json());
         el.textContent = JSON.stringify(data, null, 2);
         toast('API yanıtı alındı');
       }} catch (e) {{ el.textContent = String(e); }}
@@ -266,7 +340,7 @@ ADMIN_HTML = f"""<!DOCTYPE html>
     async function testGeojson() {{
       const el = document.getElementById('out-geojson');
       try {{
-        const data = await fetch('/geojson').then(r => r.json());
+        const data = await fetch('/geojson', {{ headers: authHeader() }}).then(r => r.json());
         el.textContent = JSON.stringify({{
           type: data.type,
           feature_count: (data.features || []).length,
@@ -292,12 +366,18 @@ ADMIN_HTML = f"""<!DOCTYPE html>
       }} catch (e) {{ el.textContent = String(e); }}
     }}
 
-    async function adminPost(path) {{
-      const key = ensureKey();
-      return fetch(path, {{
-        method: 'POST',
-        headers: key ? {{ 'X-Admin-Key': key }} : {{}}
-      }}).then(r => r.json());
+    async function adminPost(path, body) {{
+      const auth = authHeader();
+      const headers = auth.Authorization ? auth : (function () {{
+        const key = ensureKey();
+        return key ? {{ 'X-Admin-Key': key }} : {{}};
+      }})();
+      const opts = {{ method: 'POST', headers }};
+      if (body !== undefined) {{
+        opts.headers = {{ ...headers, 'Content-Type': 'application/json' }};
+        opts.body = JSON.stringify(body);
+      }}
+      return fetch(path, opts).then(r => r.json());
     }}
 
     async function testGroq() {{
@@ -306,16 +386,6 @@ ADMIN_HTML = f"""<!DOCTYPE html>
         const data = await adminPost('/test/groq');
         el.textContent = JSON.stringify(data, null, 2);
         toast(data.ok ? 'Groq pipeline OK' : 'Groq test basarisiz');
-      }} catch (e) {{ el.textContent = String(e); }}
-    }}
-
-    async function testTelegram() {{
-      const el = document.getElementById('out-integration');
-      try {{
-        const data = await adminPost('/test/telegram');
-        el.textContent = JSON.stringify(data, null, 2);
-        const sent = data.high_risk_alert && data.high_risk_alert.sent;
-        toast(sent ? 'Telegram uyarisi gonderildi' : 'Telegram: ' + (data.ping && data.ping.ok ? 'ping OK' : 'kontrol edin'));
       }} catch (e) {{ el.textContent = String(e); }}
     }}
 
@@ -339,39 +409,74 @@ ADMIN_HTML = f"""<!DOCTYPE html>
       refreshDispatchQueue();
     }}
 
+    async function submitIhbar(ev) {{
+      ev.preventDefault();
+      const logEl = document.getElementById('ihbarLog');
+      const payload = {{
+        category: document.getElementById('ihbarCategory').value,
+        incident_type: document.getElementById('ihbarType').value,
+        severity_score: parseFloat(document.getElementById('ihbarSeverity').value || '6'),
+        city: document.getElementById('ihbarCity').value,
+        district: document.getElementById('ihbarDistrict').value || null,
+        description: document.getElementById('ihbarDesc').value || null,
+      }};
+      logEl.textContent = 'Gönderiliyor…';
+      try {{
+        const j = await adminPost('/api/v1/incidents/report', payload);
+        if (j.status === 'ok') {{
+          logEl.textContent = 'İhbar #' + j.incident_id + ' sisteme düştü (' + j.timestamp + ')';
+          toast('İhbar sisteme düştü — haritada birazdan görünür');
+          document.getElementById('ihbarDesc').value = '';
+          setTimeout(refreshAll, 2000);
+          refreshDispatchQueue();
+        }} else {{
+          logEl.textContent = 'Hata: ' + (j.detail || j.status);
+        }}
+      }} catch (e) {{ logEl.textContent = 'Hata: ' + e.message; }}
+      return false;
+    }}
+
     async function refreshDispatchQueue() {{
       const countEl = document.getElementById('dispatchPending');
       const listEl = document.getElementById('dispatchQueueList');
       if (!countEl || !listEl) return;
       try {{
-        const data = await fetch('/api/v1/incidents/queue').then(r => r.json());
+        const data = await fetch('/api/v1/incidents/queue', {{ headers: authHeader() }}).then(r => r.json());
         countEl.textContent = data.pending_count ?? 0;
         const items = data.items || [];
         if (!items.length) {{
-          listEl.innerHTML = '<span style="font-size:12px;color:var(--muted)">Bekleyen kritik olay yok</span>';
+          listEl.innerHTML = '<span style="font-size:11.5px;color:var(--muted)">Bekleyen kritik olay yok</span>';
           return;
         }}
         listEl.innerHTML = items.slice(0, 8).map(function (it) {{
+          const units = it.assigned_unit_ids && it.assigned_unit_ids.length ? it.assigned_unit_ids : (it.assigned_unit_id ? [it.assigned_unit_id] : []);
+          const multiTag = it.required_units > 1 ? (' · ' + units.length + '/' + it.required_units + ' birim') : '';
           const statusLabel = it.status === 'assigned'
-            ? ('Atandı: ' + it.assigned_unit_id + (it.eta_minutes != null ? ' · ETA ' + it.eta_minutes + ' dk' : ''))
-            : 'Bekliyor';
+            ? ('Atandı: ' + units.join(', ') + multiTag + (it.eta_minutes != null ? ' · ETA ' + it.eta_minutes + ' dk' : ''))
+            : ('Bekliyor' + multiTag);
           return (
             '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;' +
-            'background:rgba(15,23,42,0.5);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px">' +
+            'background:var(--bg-soft);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;font-size:12px">' +
             '<span><b>#' + it.id + '</b> ' + (it.city || '—') + ' · siddet ' + it.severity_score +
             '<br><span style="color:var(--muted)">' + statusLabel + '</span></span>' +
             '<button class="btn" style="padding:4px 10px;font-size:11px" onclick="resolveIncident(' + it.id + ')">Kapat</button>' +
             '</div>'
           );
         }}).join('');
-      }} catch (e) {{ listEl.innerHTML = '<span style="font-size:12px;color:var(--muted)">Kuyruk okunamadı</span>'; }}
+      }} catch (e) {{ listEl.innerHTML = '<span style="font-size:11.5px;color:var(--muted)">Kuyruk okunamadı</span>'; }}
+    }}
+
+    function writeHeaders() {{
+      const auth = authHeader();
+      if (auth.Authorization) return auth;
+      const key = ensureKey();
+      return key ? {{ 'X-Admin-Key': key }} : {{}};
     }}
 
     async function resolveIncident(id) {{
-      const key = ensureKey();
       await fetch('/api/v1/incidents/' + id + '/resolve', {{
         method: 'POST',
-        headers: key ? {{ 'X-Admin-Key': key }} : {{}}
+        headers: writeHeaders(),
       }});
       toast('Olay #' + id + ' kapatıldı');
       refreshDispatchQueue();
@@ -379,10 +484,9 @@ ADMIN_HTML = f"""<!DOCTYPE html>
 
     async function clearData() {{
       if (!confirm('Tüm suç verileri silinsin mi?')) return;
-      const key = ensureKey();
       const r = await fetch('/clear', {{
         method: 'POST',
-        headers: key ? {{ 'X-Admin-Key': key }} : {{}}
+        headers: writeHeaders(),
       }});
       const j = await r.json();
       if (!r.ok) {{ toast(j.detail || 'Silinemedi'); return; }}
@@ -390,9 +494,53 @@ ADMIN_HTML = f"""<!DOCTYPE html>
       refreshAll();
     }}
 
+    async function loadScorecard() {{
+      const el = document.getElementById('scorecardTable');
+      if (!el) return;
+      try {{
+        const auth = authHeader();
+        const key = adminKey();
+        const headers = auth.Authorization ? auth : (key ? {{ 'X-Admin-Key': key }} : {{}});
+        const r = await fetch('/api/v1/analytics/scorecard', {{ headers }});
+        if (r.status === 401 || r.status === 403) {{
+          el.innerHTML = '<span style="font-size:12px;color:var(--muted)">Bu panel yalnızca admin girişiyle görüntülenebilir.</span>';
+          return;
+        }}
+        const data = await r.json();
+        const cities = data.cities || [];
+        if (!cities.length) {{
+          el.innerHTML = '<span style="font-size:12px;color:var(--muted)">Henüz karşılaştırma için yeterli veri yok.</span>';
+          return;
+        }}
+        const withData = cities.filter(function (c) {{ return c.has_data; }}).length;
+        const rows = cities.map(function (c, i) {{
+          const trendColor = c.trend_change_pct > 0 ? 'var(--danger)' : c.trend_change_pct < 0 ? 'var(--success)' : 'var(--muted)';
+          const rowStyle = c.has_data ? '' : ' style="opacity:0.45"';
+          const riskCell = c.has_data ? '<b>' + c.risk_index + '</b>' : '<span title="Bu ilde henüz olay/devriye kaydı yok">Veri yok</span>';
+          return (
+            '<tr' + rowStyle + '><td>' + (i + 1) + '</td><td>' + c.city + '</td>' +
+            '<td class="num">' + (c.avg_response_min != null ? c.avg_response_min + ' dk' : '—') + '</td>' +
+            '<td class="num">' + (c.has_data ? c.gap_score : '—') + '</td>' +
+            '<td class="num" style="color:' + (c.has_data ? trendColor : 'var(--muted)') + '">' + (c.has_data ? ((c.trend_change_pct > 0 ? '+' : '') + c.trend_change_pct + '%') : '—') + '</td>' +
+            '<td class="num">' + (c.has_data ? c.recent_incidents : '—') + '</td>' +
+            '<td class="num">' + riskCell + '</td></tr>'
+          );
+        }}).join('');
+        el.innerHTML =
+          '<p class="desc" style="margin:0 0 8px">' + withData + ' / ' + cities.length + ' ilde veri var — geri kalanı henüz olay/devriye kaydı olmayan iller (ulusal kapsama için hâlâ listede).</p>' +
+          '<table class="scorecard"><thead><tr><th>#</th><th>İl</th><th>Ort. Müdahale</th>' +
+          '<th>Kapsama Boşluğu</th><th>7g Trend</th><th>Son 7g Olay</th><th>Risk Endeksi</th></tr></thead>' +
+          '<tbody>' + rows + '</tbody></table>';
+      }} catch (e) {{
+        el.innerHTML = '<span style="font-size:12px;color:var(--muted)">Puan kartı okunamadı.</span>';
+      }}
+    }}
+
     refreshAll();
     refreshDispatchQueue();
+    loadScorecard();
     setInterval(refreshDispatchQueue, 20000);
+    setInterval(loadScorecard, 60000);
   </script>
 </body>
 </html>"""
