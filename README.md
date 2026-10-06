@@ -14,8 +14,6 @@
 
 TRİA is an OSINT + GIS platform for public-safety incidents in Turkey. It collects news about crime, police operations, traffic accidents and public-order events from open sources, structures them with an LLM, stores them in PostGIS and shows them on a live map. On top of that it runs a C4I (command & control) simulation with patrol units, dispatch, analytics and role-based access for all 81 provinces.
 
-It started as my undergraduate graduation project and grew into a multi-city public-safety prototype.
-
 > **Status:** prototype. Patrol movement, personnel and shifts are **simulated** — there is no real AVL/GPS, 112/155 call-centre or SMS integration. The API contracts are designed so that real feeds could replace the simulation later.
 
 ### Data pipeline
@@ -124,7 +122,7 @@ TRIA/
 ├── frontend/                 # Map template, JS, CSS, province/district GeoJSON
 ├── alembic/                  # Database migrations
 ├── config/sources.json       # Data source definitions
-├── docs/                     # Graduation report, plans, data source notes
+├── docs/                     # Project report, plans, data source notes
 ├── scripts/                  # CLI diagnostic tools
 └── tests/                    # pytest suite
 ```
@@ -146,8 +144,6 @@ MIT — see [LICENSE](./LICENSE).
 ## Türkçe
 
 TRİA, Türkiye'deki asayiş olayları için bir OSINT + CBS platformudur. Suç, polis operasyonu, trafik kazası ve kamu düzeni haberlerini açık kaynaklardan toplar, bir büyük dil modeliyle yapılandırır, PostGIS'te saklar ve canlı bir haritada gösterir. Bunun üzerine 81 il için devriye birimleri, sevk, analitik ve rol bazlı erişim içeren bir C4I (komuta-kontrol) simülasyonu çalıştırır.
-
-Lisans bitirme projem olarak başladı, sonra çok şehirli bir asayiş prototipine dönüştü.
 
 > **Durum:** prototip. Devriye hareketi, personel ve vardiyalar **simülasyondur**; gerçek AVL/GPS, 112/155 çağrı merkezi veya SMS entegrasyonu yoktur. API sözleşmeleri, ileride simülasyonun yerine gerçek beslemelerin geçebileceği şekilde tasarlandı.
 
@@ -257,7 +253,7 @@ TRIA/
 ├── frontend/                 # Harita şablonu, JS, CSS, il/ilçe GeoJSON
 ├── alembic/                  # Veritabanı migration'ları
 ├── config/sources.json       # Veri kaynağı tanımları
-├── docs/                     # Bitirme raporu, planlar, veri kaynağı notları
+├── docs/                     # Proje raporu, planlar, veri kaynağı notları
 ├── scripts/                  # Komut satırı teşhis araçları
 └── tests/                    # pytest test paketi
 ```
