@@ -1,7 +1,7 @@
 # TRIA C4I — Çok Şehirli Asayiş Platformu Planı
 
 > **Durum:** Taslak plan, onay bekliyor. Kod değişikliği henüz yapılmadı.
-> **Bağlam değişikliği (2026-07-13):** TRIA artık bir bitirme projesi değil; Türkiye'deki
+> **Bağlam (2026-07-13):** TRIA, Türkiye'deki
 > il/ilçe asayiş yönetimlerinin kullanacağı gerçek bir platform olarak geliştiriliyor.
 > Gerçek operasyonel veri (ihbar, birim GPS'i vb.) entegrasyonu ileride ilgili kurumlar
 > tarafından yapılacak — **bizim işimiz sistemin mantığını ve mimarisini ikna edici şekilde

@@ -479,7 +479,7 @@ Haritası" veri seti bulundu (farklı şema — yoğunluk/hız, olay değil) —
 - **Kod tabanında gerçek "ölü dosya" bulunamadı** — `app/` altındaki her modül en az bir yerden
   import ediliyor (sistematik olarak doğrulandı). v2.1'de zaten `.cursor/`, boş `.github/`,
   demo/mock sistemi temizlenmişti; bu turda ek bir kod artığı çıkmadı.
-- **`docs/TRIA_Bitirme_Raporu.md` ve `Görseller/*.png`'ye DOKUNULMADI:** Bunlar kullanıcının
+- **`docs/TRIA_Proje_Raporu.md` ve `Görseller/*.png`'ye DOKUNULMADI:** Bunlar kullanıcının
   akademik tez içeriği/ekran görüntüleri — hâlâ pre-C4I mimariyi anlatıyor (eski isim "Türkiye
   Risk İstihbarat Ağı", Time Slider/Draw&Search gibi artık var olmayan özellikler), yani
   güncel değil. Ancak bunlar kod artığı değil, kullanıcının kendi yazdığı rapor — silinmedi/

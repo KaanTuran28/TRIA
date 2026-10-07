@@ -1,26 +1,14 @@
 <div style="page-break-after: always;"></div>
 
-# T.C.
-# [ÜNİVERSİTE ADI]
-# [FAKÜLTE ADI]
-# [BÖLÜM ADI]
-
-<br><br><br>
-
-## TRİA (Türkiye Risk İstihbarat Ağı)
+# TRİA (Türkiye Risk İstihbarat Ağı)
 ### Otomatik Açık Kaynak İstihbarat (OSINT) ve CBS Tabanlı Asayiş Olay Haritalama Sistemi
 
 <br><br><br>
 
-**Proje Türü:** Lisans Bitirme Projesi / Araştırma Raporu  
-  
-**Danışman:** [Danışman Adı Soyadı, Unvan]  
-**Teslim Tarihi:** Haziran 2026  
-**Akademik Yıl:** 2025–2026
+**Proje Türü:** Araştırma Raporu  
+**Tarih:** Haziran 2026
 
 <br><br><br>
-
-**[GÖRSEL EKLENECEK: Üniversitenizin resmi logosu (Ortalanmış, yaklaşık 400x400 piksel boyutlarında)]**
 
 <div style="page-break-after: always;"></div>
 
@@ -34,7 +22,7 @@ Geleneksel veri toplama yöntemlerinin günümüzün dijital hızına yetişemem
 
 Geliştirme süreci boyunca sistem mimarisi, yüksek veri hacminde dahi çökmeden çalışabilecek asenkron yapılarla ve maliyet-etkin (cost-effective) yapay zekâ entegrasyonlarıyla örülmüştür. Sistemin "sinyal-gürültü" oranını korumak adına çok katmanlı filtreler inşa edilmiş; deprem, afet ve iklim gibi olaylar bilinçli olarak asayiş radarının dışında bırakılmıştır.
 
-Bu uzun ve zorlu mühendislik sürecinde teknik vizyonun gerçeğe dönüşmesine katkı sağlayan, akademik yönlendirmelerini esirgemeyen değerli hocalarıma ve destek olan çalışma arkadaşlarıma teşekkürlerimi sunarım.
+Bu uzun ve zorlu mühendislik sürecinde teknik vizyonun gerçeğe dönüşmesine katkı sağlayan ve destek olan herkese teşekkürlerimi sunarım.
 
 **T-X** Haziran 2026
 
@@ -408,7 +396,7 @@ Bu veri seti ile dinamik olarak temiz, siyah-beyaz yazdırma formatına uygun (P
 
 Uygulamanın sağ üst köşesinden erişilen gizli `/admin` sayfası, sistem yöneticilerine backendin kalbine inme fırsatı sunar. Burada "Scraper Metrikleri", "Çekilen Veri Sayıları", "API Limitleri" ve "Boru Hattı Hata Raporları (Diagnostics)" saniye saniye izlenebilir.
 
-Ayrıca akademik sunumlarda (Örn: Üniversite Jüri Savunması) internet bağlantısının kopması veya o anki saat diliminde Türkiye'de yeterli olay olmaması gibi risklere karşı bir "Kıyamet Günü (Doomsday)" butonu kodlanmıştır. `POST /api/v1/generate-mock-data` API rotası çalıştırıldığında, sistem İç Anadolu bölgesine 30 adet rastgele kategorize edilmiş sahte (mock) olay fırlatarak tüm ısı haritası ve kümeleme yeteneklerinin sunum esnasında kesintisiz test edilmesine imkan tanır.
+Ayrıca canlı sunumlarda internet bağlantısının kopması veya o anki saat diliminde Türkiye'de yeterli olay olmaması gibi risklere karşı bir "Kıyamet Günü (Doomsday)" butonu kodlanmıştır. `POST /api/v1/generate-mock-data` API rotası çalıştırıldığında, sistem İç Anadolu bölgesine 30 adet rastgele kategorize edilmiş sahte (mock) olay fırlatarak tüm ısı haritası ve kümeleme yeteneklerinin sunum esnasında kesintisiz test edilmesine imkan tanır.
 
 <div style="page-break-after: always;"></div>
 
@@ -418,7 +406,7 @@ Ayrıca akademik sunumlarda (Örn: Üniversite Jüri Savunması) internet bağla
 
 ## 6.1. Elde Edilen Teknik Bulgular ve Performans
 
-T-X tarafından tasarlanan ve kodlanan **TRİA (Türkiye Risk İstihbarat Ağı)** projesi; Açık Kaynak İstihbaratı (OSINT), Modern Web Çatıları (FastAPI), Uzamsal Veritabanları (PostGIS) ve Yapay Zekânın (Groq LLM) aynı potada ne kadar uyumlu ve yüksek verimli çalıştırılabileceğini kanıtlayan kapsamlı bir bitirme tezidir.
+T-X tarafından tasarlanan ve kodlanan **TRİA (Türkiye Risk İstihbarat Ağı)** projesi; Açık Kaynak İstihbaratı (OSINT), Modern Web Çatıları (FastAPI), Uzamsal Veritabanları (PostGIS) ve Yapay Zekânın (Groq LLM) aynı potada ne kadar uyumlu ve yüksek verimli çalıştırılabileceğini kanıtlayan kapsamlı bir çalışmadır.
 
 * **Filtreleme Başarısı:** Sistem, otonom kazıma süreçlerinde her gün yüzlerce haber akışını başarıyla absorbe etmiş; %90'ın üzerinde bir oranla siyasi açıklamalar, ekonomi bültenleri ve spor haberleri gibi "kuru gürültüyü (noise)" Ön Filtre algoritmalarıyla sisteme girmeden önce reddetmeyi başarmıştır.
 * **LLM Skorlama İsabeti:** Groq yapay zekâ modelinin metinden duyguyu ve felaket boyutunu analiz etmesi (Sentiment & Context Analysis) başarılı sonuçlar vermiş; haberlerdeki silahlı bir çatışmaya hızla 9 puan (Kritik Risk) verirken, maddi hasarlı küçük bir kazaya 2 puan (Düşük Risk) ataması harita üzerindeki renklendirmelerin kusursuz bir hiyerarşiyle ekrana yansımasını sağlamıştır.

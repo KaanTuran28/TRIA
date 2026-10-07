@@ -48,7 +48,7 @@ lisanslı tek olay-düzeyi beslemedir → `traffic_accident` incident_type'ını
 4. **Oran sınırlama:** Scraper 60 dk periyot + `LLM_COOLDOWN_SECONDS`; resmi API'lerde belgelenen
    limitlere uyulur.
 5. **Kapsam dışı:** 155/112 çağrı verisi gibi kapalı kamu verileri ancak resmi protokol/izinle
-   kullanılabilir — üniversite bitirme projesi kapsamında talep yazısı örneği hazırlanabilir.
+   kullanılabilir — gerekirse ilgili kuruma talep yazısı örneği hazırlanabilir.
 
 ## 4. Entegrasyon Planı (sıralı)
 
